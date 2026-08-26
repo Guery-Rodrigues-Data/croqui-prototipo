@@ -717,15 +717,20 @@ function finalizarCommitArea(proximaFerramenta) {
   let abriuNovoGrupo = false;
   if (proximaFerramenta === "veicular" && detail.area) {
     // Fluxo guiado: em vez de só deixar a ferramenta selecionada esperando um clique no
-    // mapa, já abre o formulário do primeiro grupo focal direto, no centro da área —
-    // ajustar a posição depois é só clicar no pino e arrastar (mesmo padrão de
-    // "selecionar antes de mover" que os outros grupos já usam, ver startNewEntity).
-    startNewEntity("grupo", "veicular", L.latLngBounds(detail.area).getCenter());
+    // mapa, já abre o formulário do primeiro grupo focal direto — ajustar a posição depois
+    // é só clicar no pino e arrastar.
+    // Ordem importa: dá o zoom na área ANTES de calcular a posição (senão o offset em
+    // pixels sai no zoom afastado do croqui recém-aberto). E nasce deslocado ~70px acima do
+    // centro, não no centro — o pino do controlador fica no centro da área, e antes o
+    // primeiro grupo caía exatamente em cima dele.
+    fitAreaBounds();
+    const centroArea = L.latLngBounds(detail.area).getCenter();
+    startNewEntity("grupo", "veicular", pixelOffsetLatLng(centroArea, 0, -70));
     abriuNovoGrupo = true;
   } else {
     setTool(proximaFerramenta || "cursor");
+    fitAreaBounds();
   }
-  fitAreaBounds();
   autoSave();
   // Não rouba o foco do formulário que acabou de abrir.
   if (!abriuNovoGrupo) {
@@ -1482,7 +1487,10 @@ function fitAreaBounds() {
   if (!detail.area || !detail.area.length) return;
   const bounds = L.latLngBounds(detail.area);
   const fitZoom = map.getBoundsZoom(bounds, false, [16, 16]);
-  map.setView(bounds.getCenter(), Math.max(fitZoom, AREA_FOCUS_MIN_ZOOM));
+  // animate:false — o zoom precisa valer NA HORA: logo depois disso o fluxo guiado calcula
+  // a posição do primeiro grupo em pixels (finalizarCommitArea), e com animação o
+  // map._zoom só mudaria ao fim dela.
+  map.setView(bounds.getCenter(), Math.max(fitZoom, AREA_FOCUS_MIN_ZOOM), { animate: false });
 }
 
 
@@ -1643,10 +1651,14 @@ function startNewEntity(kind, tipo, latlng) {
         arrowLat: repetidorArrowLL.lat, arrowLng: repetidorArrowLL.lng,
       };
     } else {
-      const defaultArrowLL = pixelOffsetLatLng(latlng, ARROW_DX_DEFAULT, ARROW_DY_DEFAULT);
       // Nasce sem fase nenhuma marcada — só vira "G1", "G2" etc. quando o usuário clicar
       // numa fase do formulário (ver previewGrupoId / groupIcon).
-      editingEntity = { kind: "grupo", id: null, tipo, lat: latlng.lat, lng: latlng.lng, rotationDeg: 0, direcao: DIRECOES_VEICULAR[0], fase: null, temRepetidor: false, controladorId: selectedControladorId, pinScale: 1, arrowScale: 1, arrowLat: defaultArrowLL.lat, arrowLng: defaultArrowLL.lng };
+      // NÃO fixa arrowLat/arrowLng aqui: enquanto o usuário não arrastar a flecha,
+      // groupArrowLatLng() calcula a posição dela a cada render como um offset em pixels a
+      // partir do pino (ARROW_DY_DEFAULT), sempre no zoom atual. Fixar agora congelava esse
+      // offset no zoom do momento da criação — quando o croqui abria afastado (novo croqui
+      // vindo da listagem), a flecha nascia a quilômetros do grupo.
+      editingEntity = { kind: "grupo", id: null, tipo, lat: latlng.lat, lng: latlng.lng, rotationDeg: 0, direcao: DIRECOES_VEICULAR[0], fase: null, temRepetidor: false, controladorId: selectedControladorId, pinScale: 1, arrowScale: 1 };
     }
     // Nasce sem poder arrastar — só depois de clicar no próprio pin (ver bindPinMoveClick)
     // é que o movimento dele é habilitado. Mesma lógica de "selecionar antes de mexer" da
@@ -2553,11 +2565,11 @@ function renderForm() {
             </div>
             <div class="arrow-coord">
               <label for="fArrowLat">Latitude</label>
-              <input type="number" id="fArrowLat" step="0.000001" value="${(editingEntity.arrowLat ?? 0).toFixed(6)}" />
+              <input type="number" id="fArrowLat" step="0.000001" value="${(editingEntity.arrowLat ?? groupArrowLatLng(editingEntity).lat).toFixed(6)}" />
             </div>
             <div class="arrow-coord">
               <label for="fArrowLng">Longitude</label>
-              <input type="number" id="fArrowLng" step="0.000001" value="${(editingEntity.arrowLng ?? 0).toFixed(6)}" />
+              <input type="number" id="fArrowLng" step="0.000001" value="${(editingEntity.arrowLng ?? groupArrowLatLng(editingEntity).lng).toFixed(6)}" />
             </div>
           </div>
         </div>
