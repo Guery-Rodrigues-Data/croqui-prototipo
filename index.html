@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Antares · Início</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="index.html">
+    <svg class="brand-mark" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M16 2 L29 9 V23 L16 30 L3 23 V9 Z" stroke="#161a20" stroke-width="2" stroke-linejoin="round"/>
+      <circle cx="16" cy="12" r="2.4" fill="#e0342b"/>
+      <circle cx="16" cy="16" r="2.4" fill="#e69b1f"/>
+      <circle cx="16" cy="20" r="2.4" fill="#1f9d5c"/>
+    </svg>
+    <span class="brand-word">Antares</span>
+  </a>
+  <div class="topbar-meta">
+    <span class="topbar-clock" id="clock"></span>
+    <button class="icon-btn" title="Notificações" onclick="notImplemented('Notificações')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+    </button>
+    <button class="avatar" title="Guery Braga" onclick="notImplemented('Perfil')">GB</button>
+  </div>
+</header>
+
+<main class="page">
+  <h1 class="page-title">Boas-vindas, <strong>Guery</strong></h1>
+
+  <section class="section-block">
+    <p class="section-label">Acesso rápido</p>
+    <div class="quick-grid">
+      <div class="quick-card" role="button" tabindex="0" onclick="notImplemented('Tipos de dispositivos')" onkeydown="if(event.key==='Enter'){this.click()}">
+        <div class="quick-card-top">
+          <span class="quick-card-icon icon-tint-red">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>
+          </span>
+          <button class="fav-btn" onclick="event.stopPropagation(); this.classList.toggle('is-fav')" title="Favoritar">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7.5-4.6-10-9.1C.4 8.6 2 5 5.6 5c2 0 3.4 1 4.4 2.4C11 6 12.4 5 14.4 5 18 5 19.6 8.6 22 11.9 19.5 16.4 12 21 12 21z"/></svg>
+          </button>
+        </div>
+        <span class="quick-card-title">Tipos de dispositivos</span>
+      </div>
+
+      <div class="quick-card" role="button" tabindex="0" onclick="notImplemented('Dispositivos')" onkeydown="if(event.key==='Enter'){this.click()}">
+        <div class="quick-card-top">
+          <span class="quick-card-icon icon-tint-green">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+          </span>
+          <button class="fav-btn" onclick="event.stopPropagation(); this.classList.toggle('is-fav')" title="Favoritar">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7.5-4.6-10-9.1C.4 8.6 2 5 5.6 5c2 0 3.4 1 4.4 2.4C11 6 12.4 5 14.4 5 18 5 19.6 8.6 22 11.9 19.5 16.4 12 21 12 21z"/></svg>
+          </button>
+        </div>
+        <span class="quick-card-title">Dispositivos</span>
+      </div>
+
+      <div class="quick-card" role="button" tabindex="0" onclick="notImplemented('Parâmetros dos alarmes')" onkeydown="if(event.key==='Enter'){this.click()}">
+        <div class="quick-card-top">
+          <span class="quick-card-icon icon-tint-amber">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6" cy="7" r="2"/><circle cx="14" cy="12" r="2"/><circle cx="9" cy="17" r="2"/><path d="M6 9v3a2 2 0 0 0 2 2h4M14 14v0"/></svg>
+          </span>
+          <button class="fav-btn" onclick="event.stopPropagation(); this.classList.toggle('is-fav')" title="Favoritar">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7.5-4.6-10-9.1C.4 8.6 2 5 5.6 5c2 0 3.4 1 4.4 2.4C11 6 12.4 5 14.4 5 18 5 19.6 8.6 22 11.9 19.5 16.4 12 21 12 21z"/></svg>
+          </button>
+        </div>
+        <span class="quick-card-title">Parâmetros dos alarmes</span>
+      </div>
+
+      <div class="quick-card" role="button" tabindex="0" onclick="notImplemented('Dashboard de alarmes')" onkeydown="if(event.key==='Enter'){this.click()}">
+        <div class="quick-card-top">
+          <span class="quick-card-icon icon-tint-ink">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>
+          </span>
+          <button class="fav-btn" onclick="event.stopPropagation(); this.classList.toggle('is-fav')" title="Favoritar">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7.5-4.6-10-9.1C.4 8.6 2 5 5.6 5c2 0 3.4 1 4.4 2.4C11 6 12.4 5 14.4 5 18 5 19.6 8.6 22 11.9 19.5 16.4 12 21 12 21z"/></svg>
+          </button>
+        </div>
+        <span class="quick-card-title">Dashboard de alarmes</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="home-grid">
+    <nav class="nav-cards">
+      <div style="position: relative;">
+        <button class="nav-card is-active" id="cadastrosCard" onclick="toggleSubmenu(event)" aria-haspopup="true" aria-expanded="false">
+          <span class="nav-card-icon icon-tint-red">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
+          </span>
+          <div>
+            <h3>Cadastros</h3>
+            <p>Cadastre e gerencie dispositivos, usuários e parâmetros de alarme.</p>
+          </div>
+        </button>
+
+        <div class="submenu" id="cadastrosSubmenu" role="menu">
+          <div class="submenu-group">
+            <p class="submenu-group-title">Configurações do Sistema</p>
+            <p class="submenu-group-sub">Gerencie os cadastros e parâmetros gerais da plataforma.</p>
+
+            <button class="submenu-item" onclick="notImplemented('Tipos de dispositivos')">
+              <span class="submenu-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></span>
+              <span><span class="submenu-item-title">Tipos de dispositivos</span><span class="submenu-item-desc">Cadastre e gerencie os tipos de dispositivos disponíveis.</span></span>
+            </button>
+
+            <button class="submenu-item" onclick="notImplemented('Dispositivos')">
+              <span class="submenu-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/></svg></span>
+              <span><span class="submenu-item-title">Dispositivos</span><span class="submenu-item-desc">Configure e gerencie os dispositivos conectados.</span></span>
+            </button>
+
+            <button class="submenu-item" onclick="notImplemented('Parâmetros e alarmes')">
+              <span class="submenu-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6" cy="7" r="2"/><circle cx="14" cy="12" r="2"/><circle cx="9" cy="17" r="2"/></svg></span>
+              <span><span class="submenu-item-title">Parâmetros e alarmes</span><span class="submenu-item-desc">Defina os parâmetros e condições para geração de alarmes.</span></span>
+            </button>
+
+            <button class="submenu-item" onclick="notImplemented('Grupos de usuários')">
+              <span class="submenu-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3"/><path d="M2 20v-1a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v1"/><path d="M17 8a3 3 0 1 1 3 3"/></svg></span>
+              <span><span class="submenu-item-title">Grupos de usuários</span><span class="submenu-item-desc">Organize usuários por grupos e defina permissões.</span></span>
+            </button>
+
+            <button class="submenu-item" onclick="notImplemented('Usuários')">
+              <span class="submenu-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6"/></svg></span>
+              <span><span class="submenu-item-title">Usuários</span><span class="submenu-item-desc">Adicione, edite e gerencie usuários do sistema.</span></span>
+            </button>
+          </div>
+
+          <div class="submenu-group">
+            <p class="submenu-group-title">Base Geográfica</p>
+            <p class="submenu-group-sub">Organize a estrutura de regiões e croquis dos cruzamentos.</p>
+
+            <button class="submenu-item" onclick="notImplemented('Região')">
+              <span class="submenu-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s7-6.6 7-12a7 7 0 1 0-14 0c0 5.4 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg></span>
+              <span><span class="submenu-item-title">Região</span><span class="submenu-item-desc">Cadastre e gerencie sub áreas e corredores do sistema.</span></span>
+            </button>
+
+            <a class="submenu-item is-highlight" href="cadastro-croqui.html">
+              <span class="submenu-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12h18M12 3v18" stroke-dasharray="2 2"/></svg></span>
+              <span><span class="submenu-item-title">Croqui</span><span class="submenu-item-desc">Monte e gerencie o croqui de cada cruzamento.</span></span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <button class="nav-card" onclick="notImplemented('Operações')">
+        <span class="nav-card-icon icon-tint-green">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+        </span>
+        <div>
+          <h3>Operações</h3>
+          <p>Gerencie operações e monitore eventos em tempo real.</p>
+        </div>
+      </button>
+
+      <button class="nav-card" onclick="notImplemented('Relatórios')">
+        <span class="nav-card-icon icon-tint-amber">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V9M12 19V5M20 19v-7"/></svg>
+        </span>
+        <div>
+          <h3>Relatórios</h3>
+          <p>Visualize informações e gere relatórios de forma simples.</p>
+        </div>
+      </button>
+    </nav>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h3>Últimas ações</h3>
+      </div>
+      <table class="actions">
+        <thead>
+          <tr><th>Detalhes</th><th>Data e horário</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Técnico Rodrigo</strong> alterou a programação do controlador CT-1234</td><td>17/08/2026 09:14</td></tr>
+          <tr><td><strong>Guery Braga</strong> cadastrou o croqui "Brigadeiro Franco x Padre Anchieta"</td><td>17/08/2026 08:52</td></tr>
+          <tr><td><strong>Técnica Joana</strong> alterou cadastro do grupo focal G3</td><td>16/08/2026 17:35</td></tr>
+          <tr><td><strong>Sistema</strong> registrou modo flash no controlador CT-1201</td><td>16/08/2026 14:02</td></tr>
+          <tr><td><strong>Técnico Rodrigo</strong> alterou a programação do controlador CT-1189</td><td>15/08/2026 11:47</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </div>
+
+  <div class="page-footer">
+    <span class="brand">
+      <svg class="brand-mark" viewBox="0 0 32 32" fill="none"><path d="M16 3 L28 20 H4 Z" fill="#e0342b"/></svg>
+      <span class="brand-word">DATAPROM</span>
+    </span>
+    <span>Versão 2.9.0 · protótipo local</span>
+  </div>
+</main>
+
+<script src="assets/app.js"></script>
+<script>
+  renderClock(document.getElementById("clock"));
+  setInterval(() => renderClock(document.getElementById("clock")), 30000);
+
+  function toggleSubmenu(e) {
+    e.stopPropagation();
+    const menu = document.getElementById("cadastrosSubmenu");
+    const btn = document.getElementById("cadastrosCard");
+    const willOpen = !menu.classList.contains("is-open");
+    menu.classList.toggle("is-open", willOpen);
+    btn.setAttribute("aria-expanded", String(willOpen));
+  }
+  document.addEventListener("click", (e) => {
+    const menu = document.getElementById("cadastrosSubmenu");
+    if (!menu.contains(e.target)) menu.classList.remove("is-open");
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") document.getElementById("cadastrosSubmenu").classList.remove("is-open");
+  });
+</script>
+</body>
+</html>

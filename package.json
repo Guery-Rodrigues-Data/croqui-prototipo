@@ -1,0 +1,6 @@
+{
+  "name": "croqui-prototipo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Protótipo do Cadastro de Croqui semafórico (Antares / dataprom) — site estático, sem build."
+}

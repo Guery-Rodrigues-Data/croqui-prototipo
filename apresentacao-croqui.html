@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Antares · Croqui Semafórico</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="assets/style.css" />
+<style>
+  body { height: 100%; overflow: hidden; }
+  .leaflet-container { background: #1c2b1c; font-family: var(--font-body); }
+</style>
+</head>
+<body>
+
+<header class="croqui-header">
+  <div class="croqui-header-left">
+    <a class="back-btn" id="backLink" href="cadastro-croqui.html" title="Voltar ao editor">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+    </a>
+    <div class="croqui-title-block">
+      <h1>Croqui Semafórico</h1>
+      <p class="breadcrumb">Sistema › Controladores › <span class="current" id="headerCT">—</span></p>
+    </div>
+  </div>
+  <div class="croqui-header-right">
+    <span class="status-pill" data-state="online">
+      <span class="signal-dots" data-state="online"><span></span><span></span><span></span></span>
+      Online
+    </span>
+    <button class="icon-btn" title="Configurações" onclick="notImplemented('Configurações')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    </button>
+    <button class="icon-btn" title="Filtros" onclick="notImplemented('Filtros')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16M7 12h10M11 19h2"/></svg>
+    </button>
+  </div>
+</header>
+
+<div class="croqui-body">
+  <aside class="croqui-sidebar">
+    <div id="liveControladorSlot"></div>
+    <div id="liveCycleSlot"></div>
+
+    <div class="sidebar-scroll" style="flex:1;">
+      <div>
+        <div class="entity-list-title">Grupos focais encontrados <span id="liveGruposCount">0</span></div>
+        <div id="liveGruposList"></div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="croqui-map-wrap">
+    <div id="map"></div>
+
+    <div class="live-badge" id="liveBadge">
+      <span class="live-badge-dot"></span>
+      <strong>Tempo Real</strong>
+      <span class="ct" id="liveBadgeCt">—</span>
+    </div>
+
+    <div class="legend-panel">
+      <div class="legend-title">Legenda</div>
+      <div class="legend-row"><span class="legend-swatch legend-swatch--veicular"></span> Grupo Focal Veicular</div>
+      <div class="legend-row"><span class="legend-swatch legend-swatch--pedestre"></span> Grupo Focal Pedestre</div>
+      <div class="legend-row"><span class="legend-dot legend-dot--verde"></span> Verde</div>
+      <div class="legend-row"><span class="legend-dot legend-dot--amarelo"></span> Amarelo</div>
+      <div class="legend-row"><span class="legend-dot legend-dot--vermelho"></span> Vermelho</div>
+      <div class="legend-footer" id="legendUpdated">Última atualização: —</div>
+    </div>
+
+    <div class="map-toolbar">
+      <button class="icon-btn" id="layerToggleBtn" title="Ver mapa" onclick="toggleMapLayer()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+<script src="assets/data.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="assets/apresentacao.js"></script>
+</body>
+</html>

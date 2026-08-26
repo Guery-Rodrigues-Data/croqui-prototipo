@@ -1,0 +1,3011 @@
+/* ==========================================================================
+   Croqui Semafórico — protótipo local
+   Sistema de tokens: cores tiradas da própria linguagem do semáforo
+   (vermelho = ação/parar, âmbar = atenção, verde = ok/seguir).
+   ========================================================================== */
+
+:root {
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --surface-sunken: #fafbfc;
+  --ink: #161a20;
+  --ink-muted: #5b6472;
+  --ink-faint: #8b94a3;
+  --border: #e3e6eb;
+  --border-strong: #d3d7de;
+
+  --red: #e0342b;
+  --red-dark: #b8241c;
+  --red-tint: #fdeceb;
+  --green: #1f9d5c;
+  --green-tint: #e7f7ee;
+  --amber: #e69b1f;
+  --amber-tint: #fdf3e0;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+
+  --shadow-sm: 0 1px 2px rgba(22, 26, 32, 0.06);
+  --shadow-md: 0 4px 16px rgba(22, 26, 32, 0.08);
+  --shadow-lg: 0 12px 32px rgba(22, 26, 32, 0.14);
+
+  --font-display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", "Cascadia Code", ui-monospace, monospace;
+
+  --header-h: 64px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+button, input {
+  font-family: inherit;
+}
+
+a {
+  color: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+}
+
+/* ---------- Signature: indicador semafórico (3 pontos) ---------- */
+
+.signal-dots {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 8px;
+}
+.signal-dots span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d7dae0;
+}
+.signal-dots[data-state="online"] span:nth-child(3) {
+  background: var(--green);
+  box-shadow: 0 0 6px rgba(31, 157, 92, 0.55);
+}
+.signal-dots[data-state="offline"] span:nth-child(1) {
+  background: var(--red);
+  box-shadow: 0 0 6px rgba(224, 52, 43, 0.55);
+}
+.signal-dots[data-state="pending"] span:nth-child(2) {
+  background: var(--amber);
+  box-shadow: 0 0 6px rgba(230, 155, 31, 0.55);
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+.status-pill .signal-dots { flex-direction: row; width: auto; }
+.status-pill .signal-dots span { width: 6px; height: 6px; }
+.status-pill[data-state="online"] { color: var(--green); }
+
+/* ---------- Header ---------- */
+
+.topbar {
+  height: var(--header-h);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.brand-mark {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+}
+
+.brand-word {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 19px;
+  letter-spacing: -0.01em;
+}
+
+.topbar-meta {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+.topbar-clock {
+  font-size: 13px;
+  color: var(--ink-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.icon-btn:hover {
+  background: var(--surface-sunken);
+  color: var(--ink);
+}
+.icon-btn svg { width: 18px; height: 18px; }
+.icon-btn-danger:hover { background: var(--red-tint); color: var(--red); }
+
+.avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--red);
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+/* ---------- Layout geral ---------- */
+
+.page {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 36px 28px 60px;
+}
+
+.page-title {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0 0 28px;
+}
+.page-title strong {
+  color: var(--red);
+  font-weight: 600;
+}
+
+/* ---------- Acesso rápido ---------- */
+
+.section-block {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 22px;
+  margin-bottom: 20px;
+}
+
+.section-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-muted);
+  margin: 0 0 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.quick-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.quick-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  background: var(--surface-sunken);
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.quick-card:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+.quick-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.quick-card-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.quick-card-icon svg { width: 18px; height: 18px; }
+.quick-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.icon-tint-red { background: var(--red-tint); color: var(--red); }
+.icon-tint-green { background: var(--green-tint); color: var(--green); }
+.icon-tint-amber { background: var(--amber-tint); color: var(--amber); }
+.icon-tint-ink { background: #eef0f3; color: var(--ink-muted); }
+
+.fav-btn {
+  background: none;
+  border: none;
+  color: #cfd3da;
+  cursor: pointer;
+  padding: 2px;
+}
+.fav-btn svg { width: 16px; height: 16px; }
+.fav-btn.is-fav { color: var(--red); }
+
+/* ---------- Grid principal home ---------- */
+
+.home-grid {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.nav-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.nav-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  position: relative;
+}
+.nav-card:hover {
+  box-shadow: var(--shadow-sm);
+}
+.nav-card.is-active {
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px var(--red-tint);
+}
+.nav-card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nav-card-icon svg { width: 20px; height: 20px; }
+.nav-card h3 {
+  margin: 0 0 4px;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+}
+.nav-card p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-muted);
+  line-height: 1.45;
+}
+
+/* Submenu popover */
+.submenu {
+  position: absolute;
+  top: 0;
+  left: calc(100% + 12px);
+  width: 320px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 10px;
+  z-index: 30;
+  opacity: 0;
+  transform: translateX(-6px);
+  pointer-events: none;
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+.submenu.is-open {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+.submenu-group {
+  padding: 10px 10px 12px;
+}
+.submenu-group + .submenu-group {
+  border-top: 1px solid var(--border);
+}
+.submenu-group-title {
+  margin: 0 0 2px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.submenu-group-sub {
+  margin: 0 0 10px;
+  font-size: 12.5px;
+  color: var(--ink-faint);
+}
+.submenu-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 10px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: none;
+  color: inherit;
+}
+.submenu-item:hover {
+  background: var(--surface-sunken);
+}
+.submenu-item.is-highlight {
+  background: var(--red-tint);
+}
+.submenu-item.is-highlight:hover {
+  background: #fbdedb;
+}
+.submenu-item-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--ink-muted);
+}
+.submenu-item.is-highlight .submenu-item-icon {
+  background: #fff;
+  color: var(--red);
+}
+.submenu-item-icon svg { width: 15px; height: 15px; }
+.submenu-item > span:last-child {
+  display: block;
+  flex: 1;
+  min-width: 0;
+}
+.submenu-item-title {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.submenu-item-desc {
+  display: block;
+  font-size: 12px;
+  color: var(--ink-faint);
+  margin-top: 2px;
+  line-height: 1.35;
+}
+
+/* Últimas ações */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.panel-head {
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.panel-head h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+}
+table.actions {
+  width: 100%;
+  border-collapse: collapse;
+}
+table.actions thead th {
+  background: var(--surface-sunken);
+  text-align: left;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+  font-weight: 600;
+  padding: 10px 22px;
+}
+table.actions thead th:last-child { text-align: right; }
+table.actions tbody td {
+  padding: 13px 22px;
+  font-size: 13.5px;
+  border-top: 1px solid var(--border);
+}
+table.actions tbody td:last-child {
+  text-align: right;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+table.actions tbody strong {
+  font-weight: 600;
+}
+
+.page-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 24px;
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+.page-footer .brand {
+  gap: 6px;
+}
+.page-footer .brand-mark { width: 16px; height: 16px; }
+.page-footer .brand-word { font-size: 12px; font-weight: 600; }
+
+/* ---------- Toast ---------- */
+.toast {
+  position: fixed;
+  bottom: 26px;
+  left: 50%;
+  transform: translate(-50%, 12px);
+  background: var(--ink);
+  color: #fff;
+  padding: 12px 18px;
+  border-radius: var(--radius-md);
+  font-size: 13.5px;
+  box-shadow: var(--shadow-lg);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 100;
+  max-width: 360px;
+}
+.toast.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* ==========================================================================
+   Tela: Cadastro / Lista de Croqui
+   ========================================================================== */
+
+.croqui-header {
+  height: var(--header-h);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+}
+.croqui-header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.back-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--ink-muted);
+  text-decoration: none;
+}
+.back-btn:hover { background: var(--surface-sunken); color: var(--ink); }
+.back-btn svg { width: 16px; height: 16px; }
+.croqui-title-block h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+}
+.breadcrumb {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+.breadcrumb .current { color: var(--ink-muted); }
+.croqui-header-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.croqui-body {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  height: calc(100vh - var(--header-h));
+}
+
+.croqui-sidebar {
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  overflow-y: auto;
+  padding: 20px 18px 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.croqui-sidebar h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.search-box {
+  position: relative;
+}
+.search-box svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: var(--ink-faint);
+}
+.search-box input {
+  width: 100%;
+  padding: 10px 12px 10px 36px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: 13.5px;
+  background: var(--surface-sunken);
+}
+.search-box input:focus {
+  outline: none;
+  border-color: var(--red);
+  background: var(--surface);
+}
+
+.btn-primary {
+  background: var(--red);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 11px 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 0.15s ease;
+}
+.btn-primary:hover { background: var(--red-dark); }
+.btn-primary svg { width: 16px; height: 16px; }
+
+.list-meta {
+  font-size: 12.5px;
+  color: var(--ink-faint);
+  margin: -6px 0 0;
+}
+.list-meta strong { color: var(--ink-muted); }
+
+.croqui-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.croqui-card {
+  width: 100%;
+  text-align: left;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px 12px;
+  background: var(--surface);
+  cursor: pointer;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.croqui-card:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-sunken);
+}
+
+.croqui-card.is-selected {
+  border-color: var(--red);
+  background: var(--red-tint);
+}
+.croqui-card-swatch {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--ink-muted);
+}
+.croqui-card.is-selected .croqui-card-swatch {
+  background: #fff;
+  color: var(--red);
+}
+.croqui-card-swatch svg { width: 17px; height: 17px; }
+.croqui-card-main { flex: 1; min-width: 0; }
+.croqui-card-name {
+  display: block;
+  width: 100%;
+  font-size: 13.5px;
+  font-weight: 600;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.croqui-card-id {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--ink-faint);
+}
+.croqui-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 11.5px;
+  color: var(--ink-faint);
+}
+
+.empty-note {
+  font-size: 12.5px;
+  color: var(--ink-faint);
+  text-align: center;
+  padding: 14px 6px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+}
+
+.croqui-map-wrap {
+  position: relative;
+}
+#map {
+  width: 100%;
+  height: 100%;
+}
+
+.map-toolbar {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.map-toolbar .icon-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+.map-toolbar .icon-btn.is-active {
+  background: var(--red-tint);
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.filtros-panel {
+  position: absolute;
+  top: 16px;
+  right: 64px;
+  z-index: 501;
+  width: 220px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 14px 16px;
+}
+.filtros-panel-title {
+  font-family: var(--font-display);
+  font-size: 13.5px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.filtros-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink);
+  padding: 5px 0;
+  cursor: pointer;
+}
+.filtros-check--indent { padding-left: 14px; color: var(--ink-muted); }
+.filtros-check input { accent-color: var(--red); width: 15px; height: 15px; cursor: pointer; }
+
+.map-pin {
+  width: 30px;
+  height: 30px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  background: var(--red);
+  border: 2px solid #fff;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.map-pin svg {
+  transform: rotate(45deg);
+  width: 14px;
+  height: 14px;
+  color: #fff;
+}
+.map-pin.is-selected {
+  background: var(--ink);
+  width: 36px;
+  height: 36px;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: var(--radius-md);
+}
+.map-popup {
+  font-family: var(--font-body);
+}
+.map-popup strong {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+.map-popup span {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+
+/* ==========================================================================
+   Tela: Editor de Croqui (criar e editar — mesma tela, mesmos passos)
+   ========================================================================== */
+
+.btn-secondary {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.btn-secondary:hover { background: var(--surface-sunken); }
+
+.btn-text {
+  background: none;
+  border: none;
+  color: var(--red);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 0;
+}
+.btn-text:hover { text-decoration: underline; }
+
+/* Campo "Nome do Croqui" — outlined Material, rótulo flutuante cortando a borda de
+   cima (igual ao Figma). Sempre editável, sem alternância com um modo "só leitura". */
+.name-field {
+  position: relative;
+  margin: 0 0 8px;
+}
+.name-field label {
+  position: absolute;
+  top: -8px;
+  left: 12px;
+  background: var(--surface);
+  padding: 0 4px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: #404041;
+}
+.name-field input {
+  width: 100%;
+  padding: 17px 12px;
+  border: 1px solid #404041;
+  border-radius: 4px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: #404041;
+  background: var(--surface);
+}
+.name-field input:focus { outline: none; border-color: var(--red); }
+.name-field input.needs-attention {
+  border-color: var(--amber);
+  box-shadow: 0 0 0 3px var(--amber-tint);
+}
+
+.controlador-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.controlador-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-left: 3px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 8px 9px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.controlador-chip:hover { background: var(--surface-sunken); }
+.controlador-chip.is-active { border-left-color: var(--red); }
+.controlador-chip-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  background: #fff;
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--red);
+  flex-shrink: 0;
+}
+.controlador-chip-icon svg { width: 13px; height: 13px; }
+.controlador-chip-main { flex: 1; min-width: 0; }
+.controlador-chip-name {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  color: #16151a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.controlador-chip-virtual {
+  display: inline-flex;
+  margin-left: 5px;
+  color: var(--amber);
+  vertical-align: -2px;
+}
+.controlador-chip-virtual svg { width: 13px; height: 13px; }
+.controlador-chip-via {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 400;
+  color: #404041;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.controlador-chip-origem {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--amber);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.controlador-chip-localizar,
+.controlador-chip-delete {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-faint);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.controlador-chip-localizar:hover { background: #fff; color: var(--amber); }
+.controlador-chip-localizar svg { width: 14px; height: 14px; }
+.controlador-chip-delete:hover { background: #fff; color: var(--red); }
+.controlador-chip-delete svg { width: 14px; height: 14px; }
+
+.controlador-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+}
+.controlador-badge-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  background: #fff;
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--red);
+  flex-shrink: 0;
+}
+.controlador-badge-icon svg { width: 16px; height: 16px; }
+.controlador-badge-text strong {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.controlador-badge-text span {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+
+.hint-box {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  background: #f0f4fb;
+  border: 1px solid #d9e4f5;
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  font-size: 12.5px;
+  color: #34537d;
+  line-height: 1.45;
+}
+.hint-box svg { width: 16px; height: 16px; flex-shrink: 0; margin-top: 1px; }
+.hint-box strong { color: #1f3a63; }
+.hint-box--compact { padding: 7px 10px; font-size: 11px; }
+
+/* Dica de instrução da ferramenta ativa — mesmo lugar exato do drawStatus (posição/tamanho
+   de fonte idênticos), já que os dois nunca aparecem cheios ao mesmo tempo pro usuário (o
+   toast de confirmação foi pro topo do mapa, ver .editor-page .toast) e essa posição
+   embaixo-centro já era a de referência confirmada. */
+.map-hint {
+  position: absolute;
+  bottom: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 500;
+}
+.map-hint:empty { display: none; }
+.map-hint .hint-box {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+  box-shadow: var(--shadow-md);
+  white-space: nowrap;
+}
+.map-hint .hint-box strong { color: #fff; }
+
+.sidebar-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-tab {
+  flex: 1;
+  padding: 9px 4px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-faint);
+  cursor: pointer;
+}
+.sidebar-tab:hover { color: var(--ink-muted); }
+.sidebar-tab.is-active { color: var(--red); border-bottom-color: var(--red); }
+.sidebar-tab span { font-weight: 500; opacity: 0.75; }
+
+.sidebar-scroll {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-right: 2px;
+}
+
+.entity-drawer {
+  position: absolute;
+  top: 72px;
+  right: 16px;
+  width: 340px;
+  max-height: calc(100% - 108px);
+  overflow-y: auto;
+  z-index: 500;
+}
+.entity-drawer:empty { display: none; }
+
+/* Preview de anexo (foto/PDF de anotação) — pedido da operação: dividir a tela de
+   verdade (mapa de um lado, anexo do outro) em vez de flutuar por cima do mapa. É um
+   painel encostado na borda direita, altura cheia — não flutua, ocupa espaço de
+   verdade. #map encolhe pra abrir espaço (classe .map-split, ver editor.js, que também
+   chama map.invalidateSize() depois — Leaflet não percebe sozinho a mudança de tamanho
+   do contêiner). */
+.anexo-preview {
+  position: fixed;
+  top: 101px;
+  right: 0;
+  bottom: 0;
+  width: 420px;
+  z-index: 875;
+  background: var(--surface);
+  border-left: 1.5px solid var(--border-strong);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#map.map-split { width: calc(100% - 420px); }
+body.anexo-preview-open .entity-drawer { right: 436px; }
+.anexo-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 44px 12px 16px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+.anexo-preview-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.anexo-preview .editor-form-close { position: absolute; top: 8px; right: 8px; }
+.anexo-preview-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  background: var(--surface-sunken);
+}
+.anexo-preview-body img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.anexo-preview-body iframe {
+  width: 100%;
+  height: 100%;
+  min-height: 480px;
+  border: none;
+}
+
+/* Painel de escolha de controlador — aparece quando uma área é desenhada e nenhum
+   controlador cadastrado (solto ou de outro croqui) cai dentro dela. Fica centralizado,
+   sem fundo escurecendo o resto (não é modal), mas é o único ponto de decisão até o
+   usuário escolher ou criar um novo. */
+.controlador-escolha {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.controlador-escolha-card {
+  pointer-events: auto;
+  width: 420px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+.controlador-escolha-header {
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.controlador-escolha-header strong {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.controlador-escolha-aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 9px 10px;
+  background: var(--amber-tint);
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  color: #7a5310;
+  line-height: 1.4;
+}
+.controlador-escolha-aviso svg { width: 15px; height: 15px; flex-shrink: 0; margin-top: 1px; color: var(--amber); }
+.controlador-escolha-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--ink-faint);
+}
+.controlador-escolha-search svg { width: 15px; height: 15px; flex-shrink: 0; }
+.controlador-escolha-search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  font-size: 13px;
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: none;
+}
+.controlador-escolha-items { flex: 1; min-height: 0; overflow-y: auto; }
+.controlador-escolha-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 10px 16px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: none;
+  cursor: pointer;
+}
+.controlador-escolha-item:hover { background: var(--surface-sunken); }
+.controlador-escolha-item.is-selected { background: var(--amber-tint); }
+.controlador-escolha-item-icon {
+  position: relative;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--amber-tint);
+  color: var(--amber);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.controlador-escolha-item-icon svg { width: 15px; height: 15px; }
+.controlador-escolha-item-main { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.controlador-escolha-item-id { font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--ink); }
+.controlador-escolha-item-via { font-size: 12px; color: var(--ink-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.controlador-escolha-item-distancia { flex-shrink: 0; font-size: 11.5px; color: var(--ink-faint); font-family: var(--font-mono); }
+.controlador-escolha-actions {
+  display: flex;
+  gap: 8px;
+  padding: 14px 16px;
+  border-top: 1px solid var(--border);
+}
+.controlador-escolha-actions .btn-primary,
+.controlador-escolha-actions .btn-secondary { flex: 1; padding: 9px 12px; font-size: 13px; }
+
+/* Pin dos controladores soltos (cadastrados, sem croqui vinculado ainda) no mapa do
+   editor — ícone de armário/controlador, cor âmbar pra diferenciar dos pins de croqui
+   (vermelho/cinza) e dos grupos focais (azul/roxo). */
+.map-controlador-solto-pin {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--amber);
+  color: #fff;
+  border: 2px solid #fff;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.map-controlador-solto-pin svg { width: 14px; height: 14px; }
+.map-controlador-posicao-local { position: relative; }
+.map-controlador-posicao-local-badge {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #fff;
+}
+.map-controlador-posicao-local-badge svg { width: 9px; height: 9px; }
+/* "Ver no mapa onde está o controlador físico" (mostrarLocalizacaoFisicaControlador) —
+   mesmo desenho do pino comum, mas na cor de destaque (--ink) pra ficar óbvio que é um
+   "flash" temporário apontando o cruzamento de origem, não um marcador do desenho. */
+.map-controlador-fisico-pin {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: #fff;
+  border: 2px solid #fff;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.map-controlador-fisico-pin svg { width: 16px; height: 16px; }
+
+.editor-form {
+  position: relative;
+  border: 1.5px solid var(--border-strong);
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+  box-shadow: var(--shadow-lg);
+}
+.editor-form-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: #000;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding-right: 58px;
+}
+.editor-form-controller {
+  margin: -19px 0 0;
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+.editor-form-spacer {
+  height: 120px;
+}
+.editor-form-divider {
+  height: 1px;
+  margin: -13px -18px;
+  background: var(--border);
+}
+.editor-form-header-icons {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 6px;
+}
+.editor-form-close {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--ink-muted);
+}
+.editor-form-close:hover { background: rgba(22, 26, 32, 0.08); }
+.editor-form-close svg { width: 15px; height: 15px; }
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.field label {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #000;
+}
+.field textarea,
+.field input[type="text"] {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 11px 12px;
+  font-size: 14px;
+  font-family: var(--font-body);
+  background: #fff;
+  color: var(--ink);
+}
+.field textarea { resize: vertical; min-height: 60px; }
+
+.phase-picker {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 7px;
+}
+.phase-btn {
+  position: relative;
+  padding: 9px 0;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 12.5px;
+  color: var(--ink);
+  cursor: pointer;
+}
+.phase-btn:hover { border-color: var(--ink-faint); }
+.phase-btn.is-active {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+}
+.phase-btn-dot {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--amber);
+}
+.phase-btn.is-active .phase-btn-dot { background: #fff; }
+.phase-btn-dot-outro {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--ink);
+}
+.phase-btn.is-active .phase-btn-dot-outro { background: #fff; }
+.phase-picker-legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 8px 0 0;
+  font-size: 11.5px;
+  color: var(--ink-faint);
+}
+.phase-picker-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.phase-picker-legend .phase-btn-dot,
+.phase-picker-legend .phase-btn-dot-outro { position: static; }
+
+.tipo-picker {
+  display: flex;
+  gap: 10px;
+}
+.tipo-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 8px 0;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.tipo-btn:hover { border-color: var(--ink-faint); }
+.tipo-btn.is-active {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+  font-weight: 700;
+}
+.tipo-btn-icon {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+}
+.tipo-btn-icon svg { width: 100%; height: 100%; fill: currentColor; }
+
+.arrow-coords-row {
+  display: flex;
+  gap: 8px;
+}
+.arrow-coord {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.arrow-coord label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.arrow-coord input[type="number"] {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  background: #fff;
+  color: var(--ink);
+}
+.arrow-coord input[type="number"]:focus {
+  outline: none;
+  border-color: var(--red);
+}
+
+.direcao-picker {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.direcao-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 0;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+}
+.direcao-btn svg { width: 18px; height: 18px; }
+.direcao-btn:hover { border-color: var(--ink-faint); }
+.direcao-btn.is-active {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+}
+
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+}
+.checkbox-field input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--red);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.field textarea:focus,
+.field input[type="text"]:focus {
+  outline: none;
+  border-color: var(--red);
+}
+.editor-form-actions {
+  display: flex;
+  gap: 8px;
+  position: sticky;
+  bottom: 0;
+  margin: 8px -18px -18px;
+  padding: 16px 18px 18px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-bottom-left-radius: var(--radius-lg);
+  border-bottom-right-radius: var(--radius-lg);
+}
+.editor-form-actions .btn-primary,
+.editor-form-actions .btn-secondary {
+  flex: 1;
+  height: 35px;
+  padding: 0 16px;
+  font-size: 14px;
+  border-radius: 8px;
+}
+
+.anexo-list {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.anexo-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 7px 8px;
+  background: #fff;
+  cursor: pointer;
+}
+.anexo-item:hover { background: var(--surface-sunken); }
+.anexo-item-icon {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  color: var(--ink-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.anexo-item-icon svg { width: 13px; height: 13px; }
+.anexo-item-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.anexo-item:hover .anexo-item-name { text-decoration: underline; }
+.anexo-item-view-hint {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-faint);
+}
+.anexo-item-view-hint svg { width: 14px; height: 14px; }
+.anexo-item-download,
+.anexo-item-remove {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: none;
+  color: var(--ink-faint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.anexo-item-download:hover { background: var(--surface-sunken); color: var(--ink); }
+.anexo-item-remove:hover { background: var(--red-tint); color: var(--red); }
+.anexo-item-download svg,
+.anexo-item-remove svg { width: 13px; height: 13px; }
+
+.entity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.entity-list-title {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 8px;
+}
+.entity-list-title--live { margin: 10px 0 14px; }
+.live-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--ink-muted);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+  cursor: pointer;
+}
+.live-toggle-track {
+  position: relative;
+  width: 30px;
+  height: 17px;
+  border-radius: 999px;
+  background: var(--border-strong);
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+.live-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.15s ease;
+}
+.live-toggle.is-active { color: var(--green); }
+.live-toggle.is-active .live-toggle-track {
+  background: var(--green);
+  animation: liveTrackPulse 1.2s ease-in-out infinite;
+}
+.live-toggle.is-active .live-toggle-thumb { transform: translateX(13px); }
+@keyframes liveTrackPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(31, 157, 92, 0.35); }
+  50% { box-shadow: 0 0 0 4px rgba(31, 157, 92, 0); }
+}
+
+.entity-item {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 9px 10px;
+  background: var(--surface);
+  cursor: pointer;
+}
+.entity-item:hover { background: var(--surface-sunken); }
+.entity-list-add {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: none;
+  background: none;
+  padding: 6px 2px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+.entity-list-add:hover { color: var(--ink); }
+.entity-list-add-icon {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-muted);
+}
+.entity-list-add-icon svg { width: 12px; height: 12px; }
+.entity-list-add:hover .entity-list-add-icon { border-color: var(--ink-muted); color: var(--ink); background: var(--surface-sunken); }
+.entity-item-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #fff;
+}
+.entity-item-icon svg { width: 14px; height: 14px; }
+.entity-item-icon.tipo-veicular { background: #2563a8; }
+.entity-item-icon.tipo-pedestre { background: #7c3aed; }
+.entity-item-icon.tipo-texto { background: var(--ink-muted); }
+.entity-item-main { flex: 1; min-width: 0; }
+.entity-item-name {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.entity-item-sub {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  color: var(--ink-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.entity-item-sub-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--ink-muted);
+}
+.entity-item-sub-icon svg { width: 16px; height: 16px; }
+.entity-item-sub-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.entity-item-sub-row .entity-item-sub--preview { min-width: 0; flex: 1; }
+.entity-item-sub-row .entity-item-sub--anexo { flex-shrink: 0; }
+
+/* Toolbar flutuante sobre o mapa */
+.editor-toolbar {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 500;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  align-items: center;
+  padding: 5px;
+  gap: 2px;
+}
+.editor-tool {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: none;
+  color: var(--ink-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.editor-tool svg { width: 18px; height: 18px; }
+.editor-tool:hover { background: var(--surface-sunken); color: var(--ink); }
+.editor-tool.is-active { background: var(--red); color: #fff; }
+.editor-tool--danger:hover { background: var(--red-tint); color: var(--red); }
+/* Fluxo guiado: primeiro passo obrigatório de um croqui sem área ainda (ver renderHint /
+   atualizarDestaqueBotaoArea) — some assim que a área existe ou o botão vira is-active. */
+.editor-tool.is-pulsing:not(.is-active) { color: var(--red); animation: areaBtnPulse 1.6s ease-in-out infinite; }
+@keyframes areaBtnPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(224, 52, 43, 0.35); }
+  50% { box-shadow: 0 0 0 6px rgba(224, 52, 43, 0); }
+}
+
+.area-tool-wrap { position: relative; display: inline-flex; }
+.area-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 900;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 220px;
+}
+.area-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border: none;
+  background: none;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.area-menu-item:hover { background: var(--surface-sunken); }
+.area-menu-item svg { width: 16px; height: 16px; flex-shrink: 0; color: var(--ink-muted); }
+.editor-toolbar-sep {
+  width: 1px;
+  height: 22px;
+  background: var(--border);
+  margin: 0 4px;
+}
+
+.draw-status {
+  position: absolute;
+  bottom: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 500;
+  background: var(--ink);
+  color: #fff;
+  border-radius: var(--radius-md);
+  padding: 8px 10px 8px 14px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: var(--shadow-md);
+}
+.draw-status .btn-primary { padding: 6px 12px; font-size: 12.5px; }
+
+/* Seletor de croqui — mostra qual croqui é este e deixa trocar sem voltar pra listagem.
+   Fica logo abaixo da toolbar de desenho, empilhado com a busca de endereço. */
+.croqui-switcher {
+  position: absolute;
+  top: 70px;
+  left: 16px;
+  z-index: 500;
+  width: 280px;
+}
+.croqui-switcher-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+}
+.croqui-switcher-btn .pin-icon { width: 15px; height: 15px; color: var(--red); flex-shrink: 0; }
+.croqui-switcher-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+.croqui-switcher-btn .chevron { width: 14px; height: 14px; color: var(--ink-faint); flex-shrink: 0; transition: transform 0.15s ease; }
+.croqui-switcher.is-open .croqui-switcher-btn .chevron { transform: rotate(180deg); }
+.croqui-switcher-list {
+  margin-top: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+.croqui-switcher-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  padding: 9px 12px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: none;
+  cursor: pointer;
+  font-size: 12.5px;
+  color: var(--ink);
+}
+.croqui-switcher-item:hover { background: var(--surface-sunken); }
+.croqui-switcher-item.is-current { color: var(--red); font-weight: 600; }
+.croqui-switcher-item-check { width: 14px; flex-shrink: 0; color: var(--red); }
+.croqui-switcher-footer {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 9px 12px;
+  border: none;
+  background: var(--surface-sunken);
+  color: var(--ink-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+}
+.croqui-switcher-footer:hover { background: var(--border); }
+
+/* Dentro da sidebar (ver-mudança: saiu de cima do mapa, flutuando, pra morar junto do
+   nome do croqui) — perde o posicionamento absoluto e a largura fixa, flui no lugar. */
+.croqui-sidebar .croqui-switcher { position: static; width: auto; margin-bottom: 4px; }
+.croqui-switcher-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  color: var(--ink-faint);
+}
+.croqui-switcher-search svg { width: 15px; height: 15px; flex-shrink: 0; }
+.croqui-switcher-search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  font-size: 12.5px;
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: none;
+}
+.croqui-switcher-items { max-height: 240px; overflow-y: auto; }
+.croqui-switcher-item-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.croqui-switcher-item-ct { font-family: var(--font-mono); color: var(--ink-faint); font-weight: 600; }
+.croqui-switcher-item.is-current .croqui-switcher-item-ct { color: var(--red); }
+.croqui-switcher-empty { margin: 0; padding: 10px 12px; font-size: 12px; color: var(--ink-faint); }
+
+/* Busca de endereço — empilhada abaixo do seletor de croqui. */
+.map-search {
+  position: absolute;
+  top: 124px;
+  left: 16px;
+  z-index: 500;
+  width: 280px;
+}
+.map-search-box {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+.map-search-box svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 15px;
+  height: 15px;
+  color: var(--ink-faint);
+  pointer-events: none;
+}
+.map-search-box input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-md);
+  padding: 10px 12px 10px 36px;
+  font-size: 13px;
+  color: var(--ink);
+}
+.map-search-box input:focus { outline: none; }
+.map-search-results {
+  margin-top: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  max-height: 220px;
+  overflow-y: auto;
+}
+.map-search-result {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 9px 12px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: none;
+  cursor: pointer;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--ink);
+}
+.map-search-result:last-child { border-bottom: none; }
+.map-search-result:hover, .map-search-result.is-highlighted { background: var(--surface-sunken); }
+.map-search-empty {
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+
+/* Marcadores no mapa */
+.map-vertex-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #7c3aed;
+  color: #fff;
+  border: 2px solid #fff;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+.map-regua-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #2563a8;
+  border: 2px solid #fff;
+  box-shadow: var(--shadow-sm);
+}
+.map-area-move-handle {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #e0342b;
+  color: #fff;
+  border: 2px solid #fff;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: move;
+}
+.map-area-move-handle svg { width: 16px; height: 16px; }
+
+/* wrapper com tamanho zero — o Leaflet ancora esse ponto (0,0) exatamente no lat/lng do
+   grupo focal; pin e flecha são filhos absolutamente posicionados a partir daí, cada um
+   com seu próprio transform, sem um compor/afetar o tamanho do outro. */
+.map-group-marker {
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+.map-group-pin {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 1; /* abaixo da flecha (.map-group-pin-arrow, z-index 3) */
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  box-shadow: var(--shadow-md);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.map-group-pin--veicular { background: #2563a8; border-color: #1c4a7c; }
+/* roxo, não verde — verde fica reservado pro estado "aberto" do sinaleiro no teste de
+   tempo real (senão o pino de pedestre pareceria sempre "verde" mesmo parado) */
+.map-group-pin--pedestre { background: #7c3aed; border-color: #5b21b6; }
+.map-group-pin.is-selected { outline: 3px solid var(--amber); outline-offset: 1px; }
+.map-group-pin.is-repetidor { border-style: dashed; opacity: 0.88; }
+.map-group-pin.is-dimmed { opacity: 0.38; }
+
+/* cor do pino de pedestre durante "Testar tempo real" no editor — mesma ideia da flecha
+   veicular (is-live-*), mas aqui recolore o próprio pino (pedestre não tem flecha) */
+.map-group-pin--pedestre.is-live-vermelho { background: #ff3b30; border-color: #b8241c; }
+.map-group-pin--pedestre.is-live-verde { background: #30d158; border-color: #1f9d5c; }
+
+.map-group-pin-arrow {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  color: #2563a8;
+  /* acima do pino e da linha-guia — quando a flecha é arrastada pra cima do pino, o Leaflet
+     empilha por posição e ela podia ficar por baixo, "engolindo" o clique de selecionar */
+  z-index: 3;
+  /* halo branco (fica solto sobre o mapa agora, não mais sempre em cima do pin colorido —
+     precisa de contraste próprio em qualquer fundo, satélite ou mapa claro) */
+  filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 2px #fff) drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.5));
+  cursor: pointer;
+}
+/* área de clique invisível bem maior que o desenho da flecha (17px), pra selecionar ela
+   sem precisar de mira. Escala junto com a flecha (herda o transform do pai), então
+   acompanha quando ela é redimensionada. */
+.map-group-pin-arrow::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 34px;
+  height: 34px;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+}
+.map-group-pin-arrow svg { width: 100%; height: 100%; }
+.map-group-pin-arrow svg, .map-group-pin-arrow svg path { fill: currentColor; }
+
+/* cor da flecha durante "Testar tempo real" no editor — mesmas cores das bolinhas (pin-live-dot) */
+.map-group-pin-arrow.is-live-vermelho { color: #ff3b30; }
+.map-group-pin-arrow.is-live-amarelo { color: #ffd60a; }
+.map-group-pin-arrow.is-live-verde { color: #30d158; }
+
+/* linha fina ligando o pin à flecha, quando ela foi arrastada pra longe — nasce no centro
+   do pin (mesma origem 0,0) e se estende por "width" na direção da flecha. */
+.map-group-leader-line {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 1.5px;
+  background: rgba(37, 99, 168, 0.55);
+  transform-origin: 0 50%;
+  pointer-events: none;
+}
+.map-group-pin svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+/* mini "semáforo" de 3 pontos — usado só na tela de apresentação em tempo real */
+.pin-live-dots {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-right: 2px;
+}
+.pin-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1.5px solid rgba(255, 255, 255, 0.55);
+  box-sizing: border-box;
+}
+.pin-live-dot.is-active-vermelho { background: #ff3b30; border-color: #ff3b30; box-shadow: 0 0 8px rgba(255, 59, 48, 0.8); }
+.pin-live-dot.is-active-amarelo { background: #ffd60a; border-color: #ffd60a; box-shadow: 0 0 8px rgba(255, 214, 10, 0.8); }
+.pin-live-dot.is-active-verde { background: #30d158; border-color: #30d158; box-shadow: 0 0 8px rgba(48, 209, 88, 0.8); }
+
+/* ---------- tela de apresentação em tempo real ---------- */
+
+.live-cycle-row {
+  display: flex;
+  gap: 20px;
+  padding: 2px 2px 0;
+  font-size: 13px;
+}
+.live-cycle-row .label { color: var(--ink-muted); }
+.live-cycle-row strong {
+  font-family: var(--font-mono);
+  color: var(--ink);
+  margin-left: 4px;
+}
+.live-cycle-row strong.is-stage { color: #ea580c; }
+
+.live-group-card {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.live-group-dots {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.live-group-dots .pin-live-dot {
+  width: 13px;
+  height: 13px;
+  border-color: var(--border-strong);
+  background: #fff;
+}
+.live-group-dots .pin-live-dot.is-active-vermelho,
+.live-group-dots .pin-live-dot.is-active-amarelo,
+.live-group-dots .pin-live-dot.is-active-verde {
+  border-color: transparent;
+}
+
+/* teste rápido de tempo real na própria lista de Grupos Focais do editor — dots lado a lado */
+.entity-live-dots {
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.entity-live-dots .pin-live-dot {
+  width: 9px;
+  height: 9px;
+  border-color: var(--border-strong);
+  background: #fff;
+}
+.entity-live-dots .pin-live-dot.is-active-vermelho,
+.entity-live-dots .pin-live-dot.is-active-amarelo,
+.entity-live-dots .pin-live-dot.is-active-verde {
+  border-color: transparent;
+}
+.live-group-main { flex: 1; min-width: 0; }
+.live-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.live-group-id {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--ink);
+}
+.live-group-icons { display: flex; gap: 6px; color: var(--ink-faint); }
+.live-group-icons svg { width: 14px; height: 14px; }
+.live-group-address {
+  font-size: 12.5px;
+  color: var(--ink-muted);
+  margin: 4px 0 8px;
+}
+.live-group-mv {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12.5px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.live-group-mv .label { color: var(--ink-faint); }
+.live-group-mv .value { font-family: var(--font-mono); font-weight: 700; color: var(--ink); }
+
+.live-badge {
+  position: absolute;
+  left: 16px;
+  top: 16px;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border-radius: 999px;
+  box-shadow: var(--shadow-lg);
+  padding: 8px 14px;
+  font-size: 13px;
+}
+.live-badge-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  flex-shrink: 0;
+}
+.live-badge strong { font-weight: 600; color: var(--ink); }
+.live-badge .ct { color: var(--ink-faint); font-size: 12px; font-family: var(--font-mono); }
+
+.legend-panel {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  z-index: 500;
+  width: 220px;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 16px;
+}
+.legend-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  color: var(--ink-muted);
+  padding: 4px 0;
+}
+.legend-swatch { width: 14px; height: 14px; border-radius: 5px; flex-shrink: 0; }
+.legend-swatch--veicular { background: #2563a8; }
+.legend-swatch--pedestre { background: #7c3aed; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.legend-dot--vermelho { background: #ff3b30; box-shadow: 0 0 6px rgba(255, 59, 48, 0.6); }
+.legend-dot--amarelo { background: #ffd60a; box-shadow: 0 0 6px rgba(255, 214, 10, 0.6); }
+.legend-dot--verde { background: #30d158; box-shadow: 0 0 6px rgba(48, 209, 88, 0.6); }
+.legend-footer {
+  border-top: 1px solid var(--border);
+  margin-top: 10px;
+  padding-top: 8px;
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+
+/* bolinha de rotação — fica um pouco acima da flecha, com uma haste curta ligando ela ao
+   ponto de rotação (a âncora da flecha). Antes ficava concêntrica com a alça de mover
+   (.map-arrow-move-handle) e o centro era sempre "girar"; separada, dá pra pegar mover no
+   centro e girar na bolinha destacada. */
+.map-rotate-handle {
+  position: relative;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--amber);
+  border: 2px solid #fff;
+  box-shadow: var(--shadow-sm);
+  cursor: grab;
+}
+.map-rotate-handle::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  width: 2px;
+  height: 15px; /* alcança de volta a âncora da flecha (offset de -20px no JS) */
+  transform: translateX(-50%);
+  background: var(--amber);
+  box-shadow: 0 0 0 1px #fff;
+  pointer-events: none;
+}
+
+/* um em cada canto da caixa da flecha (4 no total) — arrasta qualquer um pra redimensionar
+   só ela (escala uniforme), isolado do pin */
+.map-arrow-resize-handle {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--amber);
+  border: 2px solid #fff;
+  box-shadow: var(--shadow-sm);
+  cursor: nwse-resize;
+}
+
+/* alça invisível grudada na própria flecha, só pra dar uma área de arraste maior/mais
+   fácil de pegar do que o ícone sozinho (que já aparece desenhado por baixo dela). Maior
+   que a bolinha de rotação (por cima dela) de propósito — sobra um anel clicável só de
+   mover em volta da bolinha. */
+.map-arrow-move-handle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1.5px dashed transparent;
+  cursor: move;
+}
+.map-arrow-move-handle:hover { border-color: rgba(37, 99, 168, 0.4); }
+
+.map-text-pin {
+  max-width: 200px;
+  background: #fff;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  padding: 3px 10px 3px 3px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink);
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.map-text-pin-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--ink-muted);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.map-text-pin-icon svg { width: 11px; height: 11px; }
+.map-text-pin-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.map-text-pin-clip {
+  flex-shrink: 0;
+  display: flex;
+  color: var(--ink-faint);
+}
+.map-text-pin-clip svg { width: 12px; height: 12px; }
+.map-text-pin.is-selected { outline: 2px solid var(--amber); outline-offset: 1px; }
+.map-text-pin.is-selected .map-text-pin-icon { background: var(--amber); }
+
+@media (max-width: 900px) {
+  .home-grid { grid-template-columns: 1fr; }
+  .quick-grid { grid-template-columns: repeat(2, 1fr); }
+  .croqui-body { grid-template-columns: 1fr; }
+  .croqui-map-wrap { display: none; }
+}
+
+/* ==========================================================================
+   Tela: Listagem de Croqui — redesign a partir do Figma
+   (arquivo "Antares Revolution - Release 02", node 59035:7761)
+   Escopado em .listagem-page / classes próprias — não mexe nas classes
+   .croqui-* compartilhadas com o Editor e a Apresentação em tempo real.
+   ========================================================================== */
+
+.listagem-page {
+  background: #e5e5e5;
+  /* Fonte oficial do sistema é Roboto — redefinida só aqui (não no :root) enquanto as
+     outras 3 telas ainda não passaram por essa troca, pra não afetar quem não pediu. */
+  --font-display: "Roboto", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Roboto", "Segoe UI", system-ui, sans-serif;
+}
+
+.listagem-map {
+  position: fixed;
+  inset: 0;
+}
+
+.app-topbar {
+  position: fixed;
+  top: 20px;
+  left: 16px;
+  right: 16px;
+  height: var(--header-h);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  z-index: 900;
+}
+.app-topbar-logo {
+  display: flex;
+  align-items: center;
+  height: 36px;
+}
+.app-topbar-logo svg { height: 36px; width: auto; display: block; }
+.app-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.topbar-icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #404041;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+.topbar-icon-btn:hover { background: var(--surface-sunken); }
+.topbar-icon-btn svg { width: 22px; height: 22px; }
+
+.listagem-sidebar {
+  position: fixed;
+  left: 16px;
+  top: 101px;
+  bottom: 20px;
+  width: 360px;
+  background: var(--surface);
+  border: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  z-index: 890;
+  padding: 19px 15px 12px;
+  gap: 14px;
+}
+.listagem-sidebar h2 {
+  margin: 0;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 16px;
+  color: #1f2937;
+}
+.listagem-sidebar .search-box input {
+  background: var(--surface);
+  border-color: #d1d5db;
+  border-radius: 8px;
+  height: 37px;
+  padding: 0 12px 0 36px;
+  font-weight: 400;
+  font-size: 13px;
+  color: var(--ink);
+}
+.listagem-sidebar .search-box input::placeholder { color: #9ca3af; font-weight: 400; }
+.listagem-sidebar .search-box svg { left: 14px; color: #9ca3af; }
+.listagem-sidebar .btn-primary {
+  border-radius: 8px;
+  height: 35px;
+  padding: 0 16px;
+  font-family: var(--font-body);
+  font-size: 14px;
+}
+.listagem-sidebar .list-meta {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 12px;
+  color: #6b7280;
+  margin: 0;
+}
+.listagem-sidebar .croqui-list {
+  flex: 1;
+  overflow-y: auto;
+  gap: 8px;
+  margin-right: -6px;
+  padding-right: 6px;
+}
+.listagem-sidebar .croqui-card {
+  border-width: 1px;
+  border-radius: 8px;
+  border-color: #e5e7eb;
+  padding: 12px;
+  gap: 12px;
+  align-items: center;
+}
+.listagem-sidebar .croqui-card:hover { background: var(--surface-sunken); border-color: #e5e7eb; }
+.listagem-sidebar .croqui-card.is-selected {
+  background: #fee2e2;
+  border-color: var(--red);
+}
+.listagem-sidebar .croqui-card-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 14px;
+  background: #f3f4f6;
+  color: #6b7280;
+}
+.listagem-sidebar .croqui-card-swatch svg { width: 14px; height: 14px; }
+.listagem-sidebar .croqui-card.is-selected .croqui-card-swatch {
+  background: #fca5a5;
+  color: var(--red);
+}
+.listagem-sidebar .croqui-card-name {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 13px;
+  color: #1f2937;
+}
+.listagem-sidebar .croqui-card-id {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.listagem-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding-top: 10px;
+  border-top: 1px solid #f0f1f3;
+}
+.listagem-pagination-icons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.listagem-pagination-icons button {
+  border: none;
+  background: none;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  cursor: pointer;
+  color: #6e6e6e;
+}
+.listagem-pagination-icons button:hover { background: var(--surface-sunken); }
+.listagem-pagination-icons button:disabled {
+  color: #d4d4d4;
+  cursor: not-allowed;
+}
+.listagem-pagination-icons button:disabled:hover { background: none; }
+.listagem-pagination-label {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: #737373;
+}
+
+/* ---------- Menu do usuário (avatar "D" no topbar) ---------- */
+
+.user-menu {
+  position: relative;
+  display: flex;
+}
+.user-menu-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 190px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow-md);
+  padding: 6px;
+  z-index: 950;
+}
+.user-menu-dropdown.is-open { display: block; }
+.user-menu-dropdown .btn-text {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 6px;
+}
+.user-menu-dropdown .btn-text:hover {
+  background: var(--surface-sunken);
+  text-decoration: none;
+}
+
+.listagem-map-toolbar {
+  top: auto;
+  bottom: 110px;
+  z-index: 900;
+}
+
+/* Toggle de camada (mapa/satélite) no estilo do seletor de camadas do Google Maps —
+   canto inferior esquerdo, ícone + rótulo num cartão, em vez de um ícone sozinho. */
+.listagem-layer-toggle {
+  position: fixed;
+  bottom: 20px;
+  left: 392px;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow-md);
+  padding: 10px 14px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: #1f2937;
+  cursor: pointer;
+}
+.listagem-layer-toggle:hover { background: var(--surface-sunken); }
+.listagem-layer-toggle svg { width: 18px; height: 18px; color: #6b7280; }
+
+/* Legenda do mapa da listagem — mesmo cartão do toggle de camada, no canto superior
+   direito (lado oposto ao seletor de camada). Explica os dois tipos de pino: croqui
+   (teardrop vermelho) e controlador sem croqui (armário âmbar, reaproveita
+   .map-controlador-solto-pin do editor). */
+.listagem-legend {
+  position: fixed;
+  top: 101px;
+  right: 20px;
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-md);
+  padding: 16px 20px;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #1f2937;
+}
+.listagem-legend-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6b7280;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.listagem-legend-row { display: flex; align-items: center; gap: 12px; }
+.listagem-legend-icon {
+  width: 20px;
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.listagem-legend-icon svg {
+  width: 15px;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+}
+.listagem-legend-ctrl {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+.listagem-legend-ctrl svg { width: 12px; height: 12px; }
+
+.listagem-map-search {
+  top: 101px;
+  left: 392px;
+  z-index: 900;
+}
+
+.listagem-marker {
+  width: 26px;
+  height: 32.5px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35));
+  transition: transform 0.12s ease;
+}
+.listagem-marker svg { width: 100%; height: 100%; display: block; }
+.listagem-marker.is-selected { transform: scale(1.18); }
+
+.listagem-tooltip {
+  background: #1f2937;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-family: var(--font-body);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.35;
+}
+.listagem-tooltip::before { display: none; }
+.listagem-tooltip strong { font-size: 12.5px; font-weight: 600; }
+.listagem-tooltip-id {
+  font-size: 11px;
+  color: #d1d5db;
+  font-family: var(--font-mono);
+}
+.listagem-tooltip-grupos {
+  font-size: 11px;
+  color: #d1d5db;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  margin-top: 2px;
+  padding-top: 3px;
+}
+
+.listagem-cluster {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--red);
+  color: #fff;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 13px;
+  box-shadow: 0 0 0 6px rgba(215, 25, 32, 0.18), 0 2px 6px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+}
+
+/* Pins/cluster dos OUTROS croquis no mapa do editor — acinzentado e mais discreto que os
+   elementos do croqui atual, pra não competir visualmente com o que está sendo editado. */
+.listagem-marker--outro { opacity: 0.8; }
+.listagem-cluster--outro {
+  background: var(--ink-faint);
+  box-shadow: 0 0 0 6px rgba(139, 148, 163, 0.18), 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* ==========================================================================
+   Tela: Editor de Croqui — redesign a partir do Figma
+   (nodes 59039:14949 e 59072:14787, arquivo "Antares Revolution - Release 02")
+   Escopado em .editor-page — reaproveita as classes .croqui-* já existentes
+   (compartilhadas com a Apresentação em tempo real) via seletor descendente,
+   sem alterar a regra base delas. A toolbar do mapa, o painel direito de editar
+   grupo focal e a busca de endereço continuam com a MESMA lógica/HTML de antes —
+   só a posição deles muda, pra caber no novo layout flutuante.
+   ========================================================================== */
+
+.editor-page {
+  background: #e5e5e5;
+  /* Fonte oficial do sistema é Roboto — mesma troca já feita na listagem, escopada
+     aqui (não no :root) porque a Apresentação ainda não passou por essa troca. */
+  --font-display: "Roboto", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Roboto", "Segoe UI", system-ui, sans-serif;
+}
+
+.editor-page .croqui-body {
+  display: block;
+  height: 100vh;
+}
+
+.editor-page .croqui-map-wrap {
+  position: fixed;
+  inset: 0;
+}
+
+/* Toast sobe pro topo do mapa nessa tela — embaixo é onde mora a dica da ferramenta ativa
+   (.map-hint) e o drawStatus da área pendente, e o toast ficando ali também colidia (ex.:
+   "Controlador vinculado" bem na hora que a dica troca pra "Clique no mapa..."). Centralizado
+   na área útil (descontando a sidebar, 392px — mesmo valor de SIDEBAR_RIGHT_EDGE em
+   editor.js), não a tela inteira, e logo abaixo do header flutuante (top:20px + 64px de
+   altura, ver --header-h/.app-topbar). */
+.editor-page .toast {
+  top: 96px;
+  bottom: auto;
+  left: calc(392px + (100% - 392px) / 2);
+  transform: translate(-50%, -8px);
+}
+.editor-page .toast.is-visible { transform: translate(-50%, 0); }
+
+.editor-page .croqui-sidebar {
+  position: fixed;
+  left: 16px;
+  top: 101px;
+  bottom: 20px;
+  width: 360px;
+  background: var(--surface);
+  overflow: hidden; /* só o miolo (.sidebar-scroll) rola — header e rodapé de ações ficam sempre visíveis */
+  border: 1px solid #e5e7eb;
+  border-right: 1px solid #e5e7eb; /* sobrescreve o border-right (sem radius) da regra base */
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+  z-index: 890;
+  padding: 20px 18px 16px;
+  overflow-y: auto;
+}
+
+.editor-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0;
+}
+.editor-panel-header h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+}
+.editor-panel-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.editor-panel-btn {
+  flex: 1;
+  text-align: center;
+  padding: 11px 12px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.editor-panel-btn:hover { background: var(--surface-sunken); }
+.editor-panel-btn--primary {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+}
+.editor-panel-btn--primary:hover { background: var(--red-dark); }
+
+.editor-page .entity-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+}
+.editor-page .sidebar-tab { padding-top: 4px; }
+.editor-page .entity-item { padding: 13px 12px; }
+.editor-page .entity-item-sub { margin-top: 3px; }
+.editor-page .entity-section-heading h3 {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 18px;
+  font-weight: 500;
+  color: #111827;
+}
+.editor-page .entity-section-info {
+  position: relative;
+  display: inline-flex;
+  color: var(--ink-faint);
+  cursor: help;
+}
+.editor-page .entity-section-info svg { width: 20px; height: 20px; }
+.entity-section-tip {
+  position: fixed;
+  transform: translate(-50%, -100%);
+  background: #1f2937;
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  font-weight: 400;
+  line-height: 1.35;
+  white-space: nowrap;
+  padding: 6px 9px;
+  border-radius: 6px;
+  box-shadow: var(--shadow-md);
+  pointer-events: none;
+  z-index: 1200;
+  display: none;
+}
+
+/* Pinos com anel branco + sombra, igual ao Figma — classes já existentes,
+   só ganham um tratamento visual mais "badge", sem mudar a lógica de cor por tipo. */
+.editor-page .entity-item-icon,
+.editor-page .controlador-chip-icon {
+  border: 2px solid #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+.editor-page .controlador-chip-icon { color: #fff; background: var(--red); border-radius: 50%; }
+
+/* Reposiciona a toolbar/busca/drawer flutuantes pra caber no header e no painel novos —
+   a lógica e o HTML de cada um continuam exatamente os mesmos. O seletor de croqui saiu
+   do mapa e mora agora dentro da sidebar (ver regras .croqui-sidebar .croqui-switcher). */
+.editor-page .editor-toolbar { top: 101px; left: 392px; z-index: 860; }
+.editor-page .map-search { top: 156px; left: 392px; z-index: 861; }
+/* Filtros/camada/foco saíram do grupo à parte (colidia com o painel de editar grupo
+   focal) e viraram os 3 últimos botões da toolbar principal — o painel de filtros agora
+   abre logo abaixo da toolbar, não mais lá no canto direito. */
+.editor-page .filtros-panel { top: 101px; right: 16px; left: auto; z-index: 861; }
+.editor-page .entity-drawer { top: 101px; right: 16px; z-index: 880; max-height: calc(100vh - 121px); }

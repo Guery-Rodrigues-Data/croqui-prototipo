@@ -1,0 +1,9 @@
+node_modules/
+.vercel/
+.DS_Store
+Thumbs.db
+*.log
+
+# backups locais antigos do data.js (não precisam ir pro repo)
+assets/data.js.bak
+assets/data.js.bak2
