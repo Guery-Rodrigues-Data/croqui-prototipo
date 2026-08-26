@@ -1409,7 +1409,7 @@ function deleteCroqui(id) {
 
 // Restaura o localStorage a partir do backup-dados.json salvo em disco — usado quando os
 // dados do navegador somem (cache limpo, outro navegador/máquina). Substitui tudo que
-// está salvo agora, por isso pede confirmação antes de chamar (ver cadastro-croqui.html).
+// está salvo agora, por isso pede confirmação antes de chamar (ver index.html, a listagem).
 async function restaurarBackupDoArquivo() {
   const res = await fetch("/backup-dados.json", { cache: "no-store" });
   if (!res.ok) throw new Error("Backup não encontrado.");

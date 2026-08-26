@@ -232,7 +232,7 @@ function toggleMapLayer() {
 // ---------- pins dos outros croquis (contexto ao dar zoom out) ----------
 // Antes o mapa do editor só existia pro croqui atual — dar zoom out mostrava mapa vazio,
 // sem noção de quais outros cruzamentos estão por perto. Reaproveita o mesmo pino da
-// listagem (cadastro-croqui.html), só que acinzentado — sinaliza "não é o croqui que você
+// listagem (index.html), só que acinzentado — sinaliza "não é o croqui que você
 // tá editando agora" — clicar troca de croqui direto, sem passar pela listagem.
 const outrosCroquisPinSvg = () => `
   <div class="listagem-marker listagem-marker--outro">
@@ -2855,7 +2855,7 @@ function saveCroqui() {
   }
   saveCroquiDetail(detail);
   showToast("Croqui salvo.");
-  setTimeout(() => { window.location.href = "cadastro-croqui.html"; }, 650);
+  setTimeout(() => { window.location.href = "index.html"; }, 650);
 }
 
 // ---------- seletor de croqui (trocar sem voltar pra listagem) ----------
@@ -2924,7 +2924,7 @@ document.getElementById("croquiSwitcherSearch").addEventListener("input", (e) =>
 });
 document.getElementById("croquiSwitcherSearch").addEventListener("click", (e) => e.stopPropagation());
 document.getElementById("croquiSwitcherVerTodos").addEventListener("click", () => {
-  window.location.href = "cadastro-croqui.html";
+  window.location.href = "index.html";
 });
 document.addEventListener("click", (e) => {
   if (!document.getElementById("croquiSwitcher").contains(e.target)) fecharCroquiSwitcher();
@@ -3000,7 +3000,7 @@ if (croquiId) {
     detail.ativo = false;
     saveCroquiDetail(detail);
     showToast("Croqui desativado.");
-    setTimeout(() => { window.location.href = "cadastro-croqui.html"; }, 650);
+    setTimeout(() => { window.location.href = "index.html"; }, 650);
   });
 }
 

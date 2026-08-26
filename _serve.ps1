@@ -28,7 +28,7 @@ while ($listener.IsListening) {
     [System.IO.File]::WriteAllText($backupPath, $body, $utf8SemBom)
     $response.StatusCode = 200
   } else {
-    if ($path -eq "/") { $path = "/cadastro-croqui.html" }
+    if ($path -eq "/") { $path = "/index.html" }
     $filePath = Join-Path $root $path.TrimStart("/")
     if (Test-Path $filePath -PathType Leaf) {
       $bytes = [System.IO.File]::ReadAllBytes($filePath)

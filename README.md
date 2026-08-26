@@ -9,10 +9,9 @@ no `localStorage` do navegador.
 
 | Arquivo | O que é |
 |---|---|
-| `cadastro-croqui.html` | Listagem de croquis + controladores sem croqui no mapa (é a home no deploy) |
+| `index.html` | Home: listagem de croquis + controladores sem croqui no mapa |
 | `editor-croqui.html` | Editor de um croqui |
 | `apresentacao-croqui.html` | Croqui em tempo real |
-| `index.html` | Home "Início" original (mantida) |
 
 ## Rodar local
 
@@ -27,7 +26,7 @@ powershell -ExecutionPolicy Bypass -File .\_serve.ps1
 
 ## Deploy (Vercel)
 
-Site estático puro. `vercel.json` só faz `/` cair em `cadastro-croqui.html`.
+Site estático puro, sem build. `/` serve o `index.html` (a listagem) automaticamente.
 
 **Senha de acesso:** `middleware.js` (Vercel Edge Middleware) tranca tudo atrás de HTTP
 Basic Auth com uma senha fixa. Usuário/senha padrão estão no topo do arquivo; dá pra

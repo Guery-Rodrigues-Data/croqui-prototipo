@@ -13,7 +13,7 @@ const detail = getCroquiDetail(croquiId);
 const controlador = (detail.controladores || []).find((c) => c.id === ctParam) || (detail.controladores || [])[0] || null;
 const gruposDoControlador = controlador ? detail.grupos.filter((g) => g.controladorId === controlador.id) : [];
 
-document.getElementById("backLink").href = croquiId ? `editor-croqui.html?id=${croquiId}` : "cadastro-croqui.html";
+document.getElementById("backLink").href = croquiId ? `editor-croqui.html?id=${croquiId}` : "index.html";
 document.getElementById("headerCT").textContent = controlador ? controlador.id : "sem controlador";
 document.getElementById("liveBadgeCt").textContent = controlador ? controlador.id : "—";
 
