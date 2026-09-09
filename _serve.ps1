@@ -1,7 +1,7 @@
 $listener = New-Object System.Net.HttpListener
 $listener.Prefixes.Add("http://localhost:8743/")
 $listener.Start()
-$root = "C:\Users\guery.braga\Documents\croqui-prototipo"
+$root = "C:\Users\guery.braga\Documents\prototipos\croqui-prototipo"
 $backupPath = Join-Path $root "backup-dados.json"
 
 while ($listener.IsListening) {
