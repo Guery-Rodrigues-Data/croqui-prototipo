@@ -5,6 +5,7 @@ const DIRECOES_VEICULAR = [
   "Só frente",
   "Frente + direita",
   "Frente + esquerda",
+  "Todas",
   "Só esquerda",
   "Só direita",
   "Direita + esquerda",

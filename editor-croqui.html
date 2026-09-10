@@ -187,6 +187,19 @@
       </label>
     </div>
 
+    <div class="teste-painel" id="testePainel" style="display:none;">
+      <div class="teste-painel-header">
+        <span class="teste-painel-live-dot"></span>
+        <span class="teste-painel-controlador" id="testePainelControlador">—</span>
+        <span class="teste-painel-ciclo" id="testePainelCiclo">Ciclo —</span>
+        <button type="button" class="teste-painel-close" title="Parar teste em tempo real" onclick="toggleTesteTempoReal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="teste-painel-body" id="testePainelBody"></div>
+      <div class="teste-painel-needle" id="testePainelNeedle"></div>
+    </div>
+
     <div class="entity-drawer" id="entityDrawer"></div>
 
     <div class="anexo-preview" id="anexoPreview" style="display:none;">

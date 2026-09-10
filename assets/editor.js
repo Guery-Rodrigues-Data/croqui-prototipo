@@ -30,7 +30,9 @@ let previewMarker = null;   // marcador arrastável ativo enquanto editingEntity
 let arrowMoveHandle = null;  // a própria flecha, arrastável livremente (posição livre, sem cálculo de ângulo/distância)
 let rotateHandle = null;    // bolinha grudada bem em cima da flecha (sem haste) — só ângulo (rotação)
 let arrowResizeHandles = []; // 4 quadradinhos nos cantos da caixa da flecha — arrasta qualquer um pra escalar (uniforme), isolado do pin
-let arrowSelected = false;  // a flecha só ganha os controles acima depois de clicada — antes disso fica só o pin, arrastável direto
+let arrowSelected = false;  // a flecha só ganha os controles acima depois de clicada
+let pinMoveHandle = null;   // alça de mover o pin do grupo — mesmo ícone/padrão da alça da flecha, aparece só depois de clicar no pin
+let pinSelected = false;    // idem arrowSelected, pro pin; pin e flecha são mutuamente exclusivos (armar um desarma o outro)
 let textRotateHandle = null; // mesma ideia do rotateHandle da flecha, só que pro balão da anotação
 let textResizeHandles = [];  // idem arrowResizeHandles, pro balão da anotação
 let pendingRepetidorFor = null; // grupo focal aguardando o clique no mapa pra posicionar o repetidor dele
@@ -41,6 +43,7 @@ let mostrarDirecoes = true; // painel de Filtros — mostrar a seta de direção
 let testeTempoRealAtivo = false; // "Testar tempo real" — preview rápido das cores direto na lista, sem sair do editor
 let testeLiveState = {};
 let testeLiveInterval = null;
+let testeElapsedSegundos = 0; // segundos corridos desde que "Testar tempo real" foi ligado — move a agulha do painel de fases (renderTestePainel)
 let editingArea = false; // arrastando os vértices de uma área já desenhada (em vez de desenhar uma nova)
 let areaEditHandles = [];
 let controladorEscolhaSelecionadoId = null; // id de um candidato da lista, ou "novo" — só confirma ao clicar Salvar
@@ -129,7 +132,11 @@ function groupIcon(g, selected, dimmed) {
   // sinaleiro naquele instante. Pedestre também colore o próprio pino (hábito de quando
   // ele não tinha marcação nenhuma no chão, antes da faixa existir). O pino sempre mostra
   // o "G1" — tentei mover ele pra dentro da marcação durante o tempo real, mas ficou ruim.
-  const liveState = testeTempoRealAtivo ? testeLiveState[faseKey(g)] : null;
+  // Só liga a cor ao vivo pro controlador selecionado — testeLiveState guarda o estado de
+  // TODOS os controladores do croqui, mas o painel de fases (renderTestePainel) só mostra o
+  // selecionado; sem esse filtro aqui, um grupo de outro controlador (só esmaecido, não
+  // escondido) piscava com uma cor que não tinha nada a ver com o que o painel mostrava.
+  const liveState = testeTempoRealAtivo && g.controladorId === selectedControladorId ? testeLiveState[faseKey(g)] : null;
   const liveClass = liveState ? ` is-live-${liveState.cor}` : "";
   const pinLiveClass = g.tipo === "pedestre" ? liveClass : "";
   const rotationDeg = g.rotationDeg || 0;
@@ -283,6 +290,7 @@ function toggleTesteTempoReal() {
   testeTempoRealAtivo = !testeTempoRealAtivo;
   if (testeTempoRealAtivo) {
     testeLiveState = {};
+    testeElapsedSegundos = 0;
     detail.grupos.forEach((g) => {
       const key = faseKey(g);
       if (testeLiveState[key]) return; // já inicializado por outro grupo da mesma fase
@@ -292,17 +300,27 @@ function toggleTesteTempoReal() {
       // Duração de vermelho/verde vem do ciclo/estágios reais do controlador desse grupo,
       // não de um valor fixo igual pra qualquer um (ver liveCiclosPara em app.js).
       const ctrl = (detail.controladores || []).find((c) => c.id === g.controladorId);
-      testeLiveState[key] = {
+      const ciclos = liveCiclosPara(tipoCiclo, ctrl?.cicloSegundos, ctrl?.estagioTotal);
+      const ordem = liveCicloOrdem(ciclos);
+      const st = {
         ...liveInitialState(key, tipoCiclo, ctrl?.cicloSegundos, ctrl?.estagioTotal),
         tipoCiclo,
         cicloSegundos: ctrl?.cicloSegundos,
         estagioTotal: ctrl?.estagioTotal,
+        ciclos,
+        ordem,
       };
+      // offsetInicial: onde esta fase começa na trilha do painel de teste (ver
+      // renderTestePainel) — congelado aqui pra trilha ficar parada e só a agulha andar.
+      st.offsetInicial = livePosicaoNaTrilha(st, ciclos, ordem);
+      testeLiveState[key] = st;
     });
     testeLiveInterval = setInterval(() => {
+      testeElapsedSegundos += 1;
       Object.values(testeLiveState).forEach((st) => liveTickState(st, st.tipoCiclo, st.cicloSegundos, st.estagioTotal));
       renderLists();
       if (!editingEntity) renderMarkers();
+      renderTestePainel();
     }, 1000);
   } else if (testeLiveInterval) {
     clearInterval(testeLiveInterval);
@@ -312,6 +330,72 @@ function toggleTesteTempoReal() {
   btn.classList.toggle("is-active", testeTempoRealAtivo);
   renderLists();
   if (!editingEntity) renderMarkers();
+  renderTestePainel();
+}
+
+// ---------- painel "programação da fase" (Gantt do ciclo inteiro + agulha do instante atual) ----------
+// Mostra, enquanto "Testar tempo real" está ligado, uma linha por fase do controlador
+// selecionado com a trilha inteira do ciclo (vermelho/amarelo/verde, na proporção real) e uma
+// agulha vermelha compartilhada que varre a trilha em tempo real — mesma ideia da aba "Plano"
+// do sistema real, só que ao vivo e para todas as fases ao mesmo tempo.
+const TESTE_PAINEL_TRACK_W = 460; // px — largura fixa da trilha (não escala com o ciclo, senão um ciclo longo estoura o painel)
+
+function renderTestePainel() {
+  const panel = document.getElementById("testePainel");
+  if (!panel) return;
+  const ctrl = (detail.controladores || []).find((c) => c.id === selectedControladorId);
+  const fasesDoControlador = ctrl
+    ? [...new Set(
+        detail.grupos
+          .filter((g) => g.ativo !== false && g.controladorId === ctrl.id && g.fase != null)
+          .map((g) => g.fase)
+      )].sort((a, b) => a - b)
+    : [];
+
+  if (!testeTempoRealAtivo || !ctrl || !fasesDoControlador.length) {
+    panel.style.display = "none";
+    return;
+  }
+  panel.style.display = "";
+
+  document.getElementById("testePainelControlador").textContent = ctrl.id;
+  document.getElementById("testePainelCiclo").textContent = `Ciclo ${ctrl.cicloSegundos}s`;
+
+  const cicloSegundos = ctrl.cicloSegundos || 120;
+  const pxPerSec = TESTE_PAINEL_TRACK_W / cicloSegundos;
+
+  const rowsHtml = fasesDoControlador.map((fase) => {
+    const st = testeLiveState[ctrl.id + "|" + fase];
+    if (!st) return "";
+    const total = st.ordem.reduce((sum, cor) => sum + st.ciclos[cor].duracao, 0);
+    let segsHtml = "";
+    let pos = 0;
+    st.ordem.forEach((cor) => {
+      const dur = st.ciclos[cor].duracao;
+      // Desenha cada trecho da trilha duas vezes (ciclo atual + o seguinte) pra cobrir o
+      // "embrulho" ao redor do início, já que a trilha começa em offsetInicial, não em
+      // vermelho — o que cair fora da largura visível é só recortado (overflow hidden).
+      [0, total].forEach((repeticao) => {
+        const left = pos - st.offsetInicial + repeticao;
+        if (left + dur > 0 && left < cicloSegundos) {
+          segsHtml += `<span class="teste-fase-seg teste-fase-seg--${cor}" style="left:${(left * pxPerSec).toFixed(1)}px; width:${(dur * pxPerSec).toFixed(1)}px;"></span>`;
+        }
+      });
+      pos += dur;
+    });
+    return `
+      <div class="teste-fase-row">
+        <div class="teste-fase-label">
+          <span class="pin-live-dot is-active-${st.cor}"></span>
+          <span>Fase ${fase}</span>
+        </div>
+        <div class="teste-fase-track" style="width:${TESTE_PAINEL_TRACK_W}px;">${segsHtml}</div>
+      </div>`;
+  }).join("");
+
+  document.getElementById("testePainelBody").innerHTML = rowsHtml;
+  const needleLeft = (testeElapsedSegundos % cicloSegundos) * pxPerSec;
+  document.getElementById("testePainelNeedle").style.left = `${needleLeft.toFixed(1)}px`;
 }
 
 // ---------- filtros (Veicular / Pedestre) ----------
@@ -777,6 +861,9 @@ function vincularControladorNoCroqui(ctrl, virtual, manterSolto) {
     // handler de Salvar do modal de escolha (ver controladorEscolhaSalvar).
     novo.croquiOrigemId = ctrl.croquiOrigemId;
     novo.croquiOrigemNome = ctrl.croquiOrigemNome;
+    // Posição física real do controlador (do croqui de origem, ou do cadastro do solto) —
+    // usada pra "ver localização física" mesmo quando não há croqui de origem.
+    novo.posicaoReal = (ctrl.lat != null && ctrl.lng != null) ? [ctrl.lat, ctrl.lng] : null;
   }
   // O controlador (real, físico) não tem posição própria dentro DESSE croqui — a área
   // desenhada é só um recorte/diagrama do cruzamento, então ele ganha uma posição local
@@ -806,14 +893,17 @@ const CROQUIS_TESTE_COM_TODOS_CONTROLADORES = new Set(["CRQ-TESTE-A", "CRQ-TESTE
 function controladoresCandidatos() {
   const soltos = readControladoresSoltos().map((c) => ({ ...c, origem: "solto" }));
   const deOutros = listCroquis()
-    .filter((c) => c.id !== croquiId && c.controladorId)
+    .filter((c) => c.id !== croquiId && ((c.controladores && c.controladores.length) || c.controladorId))
     .flatMap((c) => {
-      if (CROQUIS_TESTE_COM_TODOS_CONTROLADORES.has(c.id)) {
-        return (getCroquiDetail(c.id).controladores || [])
-          .filter((ct) => !ct.virtual) // só os físicos/próprios desse croqui, não os que ele mesmo já pegou emprestado
-          .map((ct) => ({ id: ct.id, via: ct.via, origem: "croqui", croquiNome: c.nome, croquiId: c.id, lat: c.lat, lng: c.lng }));
-      }
-      return [{ id: c.controladorId, via: c.nome, origem: "croqui", croquiNome: c.nome, croquiId: c.id, lat: c.lat, lng: c.lng }];
+      // Os controladores de cada croqui já vêm na lista (c.controladores), sem precisar
+      // abrir o detalhe completo. Vincular qualquer um deles aqui vira "virtual" — o
+      // físico dele continua no croqui de origem. Fallback pro campo antigo c.controladorId.
+      const doCroqui = (c.controladores && c.controladores.length)
+        ? c.controladores
+        : [{ id: c.controladorId, via: c.nome }];
+      return doCroqui
+        .filter((ct) => !ct.virtual) // só os físicos/próprios desse croqui, não os emprestados
+        .map((ct) => ({ id: ct.id, via: ct.via || c.nome, origem: "croqui", croquiNome: c.nome, croquiId: c.id, lat: c.lat, lng: c.lng }));
     });
   return [...soltos, ...deOutros];
 }
@@ -913,6 +1003,7 @@ function renderControladorEscolhaItems(query) {
         <span class="controlador-escolha-item-main">
           <span class="controlador-escolha-item-id">${escapeHtml(c.id)}</span>
           <span class="controlador-escolha-item-via">${escapeHtml(c.via || "")}</span>
+          <span class="controlador-escolha-item-origem${c.origem === "croqui" ? " is-sub" : ""}">${c.origem === "croqui" ? escapeHtml(c.croquiNome && c.croquiNome !== c.id ? c.croquiNome : (c.croquiId || "croqui sem nome")) : "Sem croqui cadastrado"}</span>
         </span>
         ${Number.isFinite(c.distanciaKm) ? `<span class="controlador-escolha-item-distancia">${formatDistanciaKm(c.distanciaKm)}</span>` : ""}
       </button>`).join("")
@@ -953,15 +1044,21 @@ document.getElementById("controladorEscolhaSalvar").addEventListener("click", ()
   if (!controladorEscolhaSelecionadoId) { showToast("Escolha um controlador da lista."); return; }
   const c = controladoresCandidatos().find((x) => x.id === controladorEscolhaSelecionadoId);
   if (!c) return;
-  const virtual = c.origem === "croqui";
-  // Só busca o detalhe completo do croqui de origem agora (fases/ciclo reais do
-  // controlador) — não precisa disso pra todo mundo só pra listar/buscar.
-  const dadosReais = virtual
+  // Quem chega aqui foi escolhido no modal — ou seja, não tinha controlador DENTRO da área
+  // (esse teria sido vinculado sozinho, ver commitArea). Então todo controlador escolhido
+  // aqui está fisicamente fora da área e entra como sub-controlador (virtual), tenha ele
+  // croqui de origem ou seja um solto ainda sem croqui.
+  const virtual = true;
+  // Se veio de outro croqui, busca o detalhe pra pegar fases/ciclo reais; se é solto, o
+  // próprio candidato já tem esses dados.
+  const dadosReais = c.croquiId
     ? (getCroquiDetail(c.croquiId).controladores || []).find((ct) => ct.id === c.id)
     : c;
-  vincularControladorNoCroqui({ ...(dadosReais || c), croquiOrigemId: c.croquiId, croquiOrigemNome: c.croquiNome }, virtual);
+  vincularControladorNoCroqui({ ...(dadosReais || c), croquiOrigemId: c.croquiId, croquiOrigemNome: c.croquiNome, lat: c.lat, lng: c.lng }, virtual);
   fecharEscolhaControlador();
-  showToast(virtual ? `Controlador ${c.id} vinculado como virtual (principal em ${c.croquiNome}).` : `Controlador ${c.id} vinculado.`);
+  showToast(c.croquiNome
+    ? `Controlador ${c.id} vinculado como sub-controlador (físico em ${c.croquiNome}).`
+    : `Controlador ${c.id} vinculado como sub-controlador.`);
   finalizarCommitArea("veicular");
 });
 
@@ -1660,20 +1757,13 @@ function startNewEntity(kind, tipo, latlng) {
       // vindo da listagem), a flecha nascia a quilômetros do grupo.
       editingEntity = { kind: "grupo", id: null, tipo, lat: latlng.lat, lng: latlng.lng, rotationDeg: 0, direcao: DIRECOES_VEICULAR[0], fase: null, temRepetidor: false, controladorId: selectedControladorId, pinScale: 1, arrowScale: 1 };
     }
-    // Nasce sem poder arrastar — só depois de clicar no próprio pin (ver bindPinMoveClick)
-    // é que o movimento dele é habilitado. Mesma lógica de "selecionar antes de mexer" da
-    // flecha, só que sem redimensionar (o pin não precisa disso).
+    // Pin e flecha seguem o mesmo padrão: nascem parados, um clique arma cada um e faz
+    // aparecer o ícone de mover no centro dele. Só um fica armado por vez. Mover o pin não
+    // leva a flecha junto (ver addPinMoveHandle).
     previewMarker = L.marker(latlng, { icon: groupIcon(editingEntity, true), draggable: false }).addTo(map);
-    previewMarker.on("drag", (e) => {
-      const ll = e.target.getLatLng();
-      editingEntity.lat = ll.lat; editingEntity.lng = ll.lng;
-      repositionArrowMoveHandle();
-      repositionRotateHandle();
-      repositionArrowResizeHandle();
-    });
     arrowSelected = false;
-    bindArrowSelectClick();
-    bindPinMoveClick();
+    pinSelected = false;
+    bindPinArrowClicks();
   } else {
     editingEntity = { kind: "texto", id: null, lat: latlng.lat, lng: latlng.lng, titulo: "", texto: "", rotationDeg: 0, pinScale: 1 };
     previewMarker = L.marker(latlng, { icon: textIcon(editingEntity, true), draggable: true }).addTo(map);
@@ -1719,16 +1809,9 @@ function openEditEntity(kind, refId) {
     const official = groupLayers.find((l) => l.__uid === refId);
     if (official) map.removeLayer(official);
     previewMarker = L.marker([g.lat, g.lng], { icon: groupIcon(editingEntity, true), draggable: false }).addTo(map);
-    previewMarker.on("drag", (e) => {
-      const ll = e.target.getLatLng();
-      editingEntity.lat = ll.lat; editingEntity.lng = ll.lng;
-      repositionArrowMoveHandle();
-      repositionRotateHandle();
-      repositionArrowResizeHandle();
-    });
     arrowSelected = false;
-    bindArrowSelectClick();
-    bindPinMoveClick();
+    pinSelected = false;
+    bindPinArrowClicks();
     map.panTo([g.lat, g.lng]);
   } else {
     const t = detail.textos.find((x) => x.id === refId);
@@ -1754,10 +1837,12 @@ function finishEntityEditing() {
   removeArrowMoveHandleIfAny();
   removeRotateHandleIfAny();
   removeArrowResizeHandleIfAny();
+  removePinMoveHandleIfAny();
   removeTextRotateHandleIfAny();
   removeTextResizeHandleIfAny();
   fecharAnexoPreview();
   arrowSelected = false;
+  pinSelected = false;
   if (previewMarker) { map.removeLayer(previewMarker); previewMarker = null; }
   editingEntity = null;
   renderForm();
@@ -1881,7 +1966,7 @@ function pixelOffsetLatLng(latlng, dx, dy) {
   return map.containerPointToLatLng(L.point(pt.x + dx, pt.y + dy));
 }
 
-const ARROW_RESIZE_GAP = 14;        // px — distância-base (diagonal) dos cantos da caixa, escala com arrowScale
+const ARROW_RESIZE_GAP = 18;        // px — distância-base (diagonal) dos cantos da caixa, escala com arrowScale; > raio da alça de mover (30px) pra não sobrepor
 const ARROW_RESIZE_CORNERS = [[1, 1], [1, -1], [-1, 1], [-1, -1]]; // sinais (x,y) dos 4 cantos, em pixels de tela
 
 // Latlng de onde a flecha em edição está ancorada agora — ponto geográfico real, não
@@ -1894,7 +1979,10 @@ function arrowLatLng() {
 function addArrowMoveHandle() {
   removeArrowMoveHandleIfAny();
   arrowMoveHandle = L.marker(arrowLatLng(), {
-    icon: L.divIcon({ html: "", className: "map-arrow-move-handle", iconSize: [32, 32], iconAnchor: [16, 16] }),
+    icon: L.divIcon({
+      html: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg>`,
+      className: "map-arrow-move-handle", iconSize: [30, 30], iconAnchor: [15, 15],
+    }),
     draggable: true,
     zIndexOffset: 1100, // sempre por cima do pin/flecha (senão o Leaflet ordena por posição geográfica e a alça pode ficar "atrás")
   }).addTo(map);
@@ -1917,19 +2005,20 @@ function repositionArrowMoveHandle() {
   arrowMoveHandle.setLatLng(arrowLatLng());
 }
 
-// 2) Rotacionar — bolinha um pouco ACIMA do ponto-âncora da flecha, não concêntrica com a
-// alça de mover (essa fica no centro). Antes as duas dividiam o mesmo pixel e o centro era
-// sempre "girar"; separando-as, centro = mover, bolinha destacada = girar. O ângulo ainda
-// é calculado pela direção do arraste a partir do centro da flecha; ao soltar, a bolinha
-// volta a travar na posição de descanso (logo acima da flecha).
-const ROTATE_HANDLE_OFFSET_Y = -20; // px de tela, acima da âncora da flecha
+// 2) Rotacionar — botão com ícone de flecha girando, no topo, acima da alça de mover (30px)
+// e dos cantos de redimensionar, sem encostar em nada. O ângulo é calculado pela direção do
+// arraste a partir do centro da flecha; ao soltar, volta a travar na posição de descanso.
+const ROTATE_HANDLE_OFFSET_Y = -50; // px de tela, acima da âncora da flecha
 function rotateHandleLatLng() {
   return pixelOffsetLatLng(arrowLatLng(), 0, ROTATE_HANDLE_OFFSET_Y);
 }
 function addRotateHandle() {
   removeRotateHandleIfAny();
   rotateHandle = L.marker(rotateHandleLatLng(), {
-    icon: L.divIcon({ html: "", className: "map-rotate-handle", iconSize: [10, 10], iconAnchor: [5, 5] }),
+    icon: L.divIcon({
+      html: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v5h-5"/></svg>`,
+      className: "map-rotate-handle", iconSize: [24, 24], iconAnchor: [12, 12],
+    }),
     draggable: true,
     zIndexOffset: 1200,
   }).addTo(map);
@@ -2071,41 +2160,95 @@ function repositionTextResizeHandle() {
   });
 }
 
-// ---------- selecionar a flecha ou o pin antes de poder mexer neles ----------
-// Nem o pin nem a flecha se mexem de graça — clicar em cada um primeiro "arma" o
-// movimento dele. A flecha ainda ganha alças extras de girar/redimensionar; o pin só
-// mesmo o arrastar (não precisa de mais nada).
+// ---------- selecionar o pin ou a flecha antes de poder mexer neles ----------
+// Mesmo padrão pros dois: nascem parados, um clique arma e faz aparecer o ícone de mover
+// no centro do elemento clicado. Só um fica armado por vez. A flecha ainda ganha alças
+// extras de girar e redimensionar.
 
-function bindArrowSelectClick() {
-  if (arrowSelected || !previewMarker || editingEntity.kind !== "grupo") return;
+// A área clicável da flecha (.map-group-pin-arrow) é um FILHO do elemento do pin, e todo
+// previewMarker.setIcon() reconstrói esse filho via innerHTML — levando junto qualquer
+// listener preso nele. Por isso a escuta vai no elemento EXTERNO do pin (que o Leaflet
+// reaproveita no setIcon, não recria) via delegação. Assim continua valendo depois de
+// arrastar/redimensionar a flecha, mexer nos campos, ou deselecionar e clicar de novo.
+function bindPinArrowClicks() {
+  if (!previewMarker || editingEntity.kind !== "grupo") return;
   if (editingEntity.tipo !== "veicular" && editingEntity.tipo !== "pedestre") return;
   const el = previewMarker.getElement();
-  const arrowEl = el && el.querySelector(".map-group-pin-arrow");
-  if (!arrowEl) return;
-  L.DomEvent.on(arrowEl, "mousedown", L.DomEvent.stopPropagation); // senão o clique começa a arrastar o pin, não seleciona a flecha
-  L.DomEvent.on(arrowEl, "click", (e) => {
+  if (!el || el.__pinArrowBound) return;
+  el.__pinArrowBound = true;
+  L.DomEvent.on(el, "click", (e) => {
     L.DomEvent.stopPropagation(e);
-    selectArrow();
-  });
-}
-
-// Clicar em qualquer parte do pin que não seja a flecha (ela já intercepta e para a
-// propagação do próprio clique dela, ver bindArrowSelectClick) habilita o arraste do pin.
-function bindPinMoveClick() {
-  if (!previewMarker) return;
-  previewMarker.on("click", () => {
-    if (previewMarker.dragging && !previewMarker.dragging.enabled()) {
-      previewMarker.dragging.enable();
-    }
+    if (e.target.closest(".map-group-pin-arrow")) selectArrow();
+    else selectPin();
   });
 }
 
 function selectArrow() {
   if (arrowSelected) return;
+  deselectPin();
   arrowSelected = true;
   addArrowMoveHandle();
   addRotateHandle();
   addArrowResizeHandle();
+}
+
+function deselectArrow() {
+  if (!arrowSelected) return;
+  arrowSelected = false;
+  removeArrowMoveHandleIfAny();
+  removeRotateHandleIfAny();
+  removeArrowResizeHandleIfAny();
+}
+
+function selectPin() {
+  if (pinSelected) return;
+  deselectArrow();
+  pinSelected = true;
+  addPinMoveHandle();
+}
+
+function deselectPin() {
+  if (!pinSelected) return;
+  pinSelected = false;
+  removePinMoveHandleIfAny();
+}
+
+// Alça de mover o pin — mesmo círculo/ícone da alça de mover a flecha, centrado no pin.
+// Mover o pin NÃO leva a flecha junto: no primeiro arraste fixamos a posição absoluta da
+// flecha (se ainda era só um offset relativo ao pin), então ela fica onde está e a linha
+// fina passa a ligar os dois.
+function addPinMoveHandle() {
+  removePinMoveHandleIfAny();
+  pinMoveHandle = L.marker([editingEntity.lat, editingEntity.lng], {
+    icon: L.divIcon({
+      html: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg>`,
+      className: "map-arrow-move-handle", iconSize: [30, 30], iconAnchor: [15, 15],
+    }),
+    draggable: true,
+    zIndexOffset: 1000,
+  }).addTo(map);
+  pinMoveHandle.on("dragstart", () => {
+    if (editingEntity.arrowLat == null || editingEntity.arrowLng == null) {
+      const ll = groupArrowLatLng(editingEntity);
+      editingEntity.arrowLat = ll.lat;
+      editingEntity.arrowLng = ll.lng;
+    }
+  });
+  pinMoveHandle.on("drag", () => {
+    const ll = pinMoveHandle.getLatLng();
+    editingEntity.lat = ll.lat;
+    editingEntity.lng = ll.lng;
+    previewMarker.setLatLng(ll);
+    previewMarker.setIcon(groupIcon(editingEntity, true));
+  });
+}
+
+function removePinMoveHandleIfAny() {
+  if (pinMoveHandle) { map.removeLayer(pinMoveHandle); pinMoveHandle = null; }
+}
+
+function repositionPinMoveHandle() {
+  if (pinMoveHandle) pinMoveHandle.setLatLng([editingEntity.lat, editingEntity.lng]);
 }
 
 // ---------- render: markers salvos, painel lateral ----------
@@ -2178,6 +2321,7 @@ function selectControlador(id) {
   renderControlador();
   renderMarkers();
   renderLists();
+  renderTestePainel();
 }
 
 // Remover um controlador tira junto todos os grupos focais vinculados a ele (não tem
@@ -2201,6 +2345,7 @@ function removerControlador(id) {
   renderControlador();
   renderMarkers();
   renderLists();
+  renderTestePainel();
   autoSave();
   showToast(`Controlador ${id} removido.`);
 }
@@ -2219,14 +2364,14 @@ function renderControlador() {
       ${controladores.map((c) => `
         <div role="button" tabindex="0" class="controlador-chip${c.id === selectedControladorId ? " is-active" : ""}" data-controlador="${c.id}">
           <span class="controlador-chip-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="2" width="8" height="18" rx="4"/><circle cx="12" cy="7" r="1.3" fill="currentColor" stroke="none"/><circle cx="12" cy="11" r="1.3" fill="currentColor" stroke="none"/><circle cx="12" cy="15" r="1.3" fill="currentColor" stroke="none"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 7h.01M8 11h.01M8 15h.01M13 7h3M13 11h3M13 15h3"/></svg>
           </span>
           <span class="controlador-chip-main">
             <span class="controlador-chip-name">${escapeHtml(c.id)}${c.virtual ? `<span class="controlador-chip-virtual" title="Virtual — o controlador físico está em outro cruzamento, esse croqui só usa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 17H7A5 5 0 0 1 7 7h2M15 7h2a5 5 0 1 1 0 10h-2M8 12h8"/></svg></span>` : ""}</span>
             <span class="controlador-chip-via">${escapeHtml(c.via || "")}</span>
             ${c.virtual && c.croquiOrigemNome ? `<span class="controlador-chip-origem">também em ${escapeHtml(c.croquiOrigemNome)}</span>` : ""}
           </span>
-          ${c.virtual && c.croquiOrigemId ? `<button type="button" class="controlador-chip-localizar" title="Ver no mapa onde está o controlador físico" onclick="event.stopPropagation(); mostrarLocalizacaoFisicaControlador('${c.id}')">
+          ${c.virtual && (c.croquiOrigemId || (c.posicaoReal && c.posicaoReal.length === 2)) ? `<button type="button" class="controlador-chip-localizar" title="Ver no mapa onde está o controlador físico" onclick="event.stopPropagation(); mostrarLocalizacaoFisicaControlador('${c.id}')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
           </button>` : ""}
           <button type="button" class="controlador-chip-delete" title="Remover controlador ${escapeHtml(c.id)} do croqui" onclick="event.stopPropagation(); removerControlador('${c.id}')">
@@ -2290,9 +2435,20 @@ let localizacaoFisicaMarker = null;
 let localizacaoFisicaTimeout = null;
 function mostrarLocalizacaoFisicaControlador(id) {
   const c = (detail.controladores || []).find((x) => x.id === id);
-  if (!c || !c.croquiOrigemId) return;
-  const origem = listCroquis().find((cq) => cq.id === c.croquiOrigemId);
-  if (!origem) { showToast("Não foi possível localizar o cruzamento de origem."); return; }
+  if (!c) return;
+  // Posição física real: do croqui de origem (veio de outro croqui) ou a posição
+  // cadastrada do próprio controlador (era um solto sem croqui).
+  let pos = null;
+  let rotulo = "";
+  if (c.croquiOrigemId) {
+    const origem = listCroquis().find((cq) => cq.id === c.croquiOrigemId);
+    if (origem) { pos = [origem.lat, origem.lng]; rotulo = origem.nome || "cruzamento sem nome"; }
+  }
+  if (!pos && c.posicaoReal && c.posicaoReal.length === 2) {
+    pos = c.posicaoReal;
+    rotulo = "posição cadastrada do controlador";
+  }
+  if (!pos) { showToast("Não foi possível localizar o controlador físico."); return; }
 
   if (localizacaoFisicaMarker) { map.removeLayer(localizacaoFisicaMarker); localizacaoFisicaMarker = null; }
   if (localizacaoFisicaTimeout) { clearTimeout(localizacaoFisicaTimeout); localizacaoFisicaTimeout = null; }
@@ -2301,13 +2457,13 @@ function mostrarLocalizacaoFisicaControlador(id) {
     html: `<div class="map-controlador-fisico-pin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 7h.01M8 11h.01M8 15h.01M13 7h3M13 11h3M13 15h3"/></svg></div>`,
     className: "", iconSize: [30, 30], iconAnchor: [15, 15],
   });
-  localizacaoFisicaMarker = L.marker([origem.lat, origem.lng], { icon, interactive: false, zIndexOffset: 1400 }).addTo(map);
-  localizacaoFisicaMarker.bindTooltip(`<strong>${escapeHtml(c.id)} — controlador físico</strong><span class="listagem-tooltip-id">${escapeHtml(origem.nome || "cruzamento sem nome")}</span>`, {
+  localizacaoFisicaMarker = L.marker(pos, { icon, interactive: false, zIndexOffset: 1400 }).addTo(map);
+  localizacaoFisicaMarker.bindTooltip(`<strong>${escapeHtml(c.id)} — controlador físico</strong><span class="listagem-tooltip-id">${escapeHtml(rotulo)}</span>`, {
     direction: "top", offset: [0, -18], className: "listagem-tooltip", permanent: true,
   }).openTooltip();
 
   const areaBounds = detail.area && detail.area.length ? L.latLngBounds(detail.area) : L.latLngBounds([[detail.lat, detail.lng], [detail.lat, detail.lng]]);
-  areaBounds.extend([origem.lat, origem.lng]);
+  areaBounds.extend(pos);
   map.fitBounds(areaBounds, { padding: [80, 80], maxZoom: 19 });
 
   // Some sozinho depois de um tempo — é só um "flash" pra localizar, não um marcador
@@ -2604,10 +2760,8 @@ function renderForm() {
     document.querySelectorAll("#fTipoGroup .tipo-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
         editingEntity.tipo = btn.dataset.tipo;
-        arrowSelected = false;
-        removeArrowMoveHandleIfAny();
-        removeRotateHandleIfAny();
-        removeArrowResizeHandleIfAny();
+        deselectArrow();
+        deselectPin();
         // Veicular e pedestre têm, os dois, marcação no chão agora — só a direção
         // (setinha) é exclusiva do veicular.
         if (editingEntity.tipo === "veicular" && !editingEntity.direcao) editingEntity.direcao = DIRECOES_VEICULAR[0];
@@ -2617,7 +2771,7 @@ function renderForm() {
           editingEntity.arrowLng = ll.lng;
         }
         previewMarker.setIcon(groupIcon(editingEntity, true));
-        bindArrowSelectClick();
+        bindPinArrowClicks();
         renderForm();
       });
     });
@@ -2627,7 +2781,7 @@ function renderForm() {
           editingEntity.direcao = btn.dataset.direcao;
           document.querySelectorAll("#fDirecaoGroup .direcao-btn").forEach((b) => b.classList.toggle("is-active", b === btn));
           previewMarker.setIcon(groupIcon(editingEntity, true));
-          bindArrowSelectClick();
+          bindPinArrowClicks();
         });
       });
     }

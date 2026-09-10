@@ -1254,6 +1254,8 @@ body.anexo-preview-open .entity-drawer { right: 436px; }
 .controlador-escolha-item-main { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .controlador-escolha-item-id { font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--ink); }
 .controlador-escolha-item-via { font-size: 12px; color: var(--ink-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.controlador-escolha-item-origem { font-size: 11px; color: var(--ink-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.controlador-escolha-item-origem.is-sub { color: var(--amber); }
 .controlador-escolha-item-distancia { flex-shrink: 0; font-size: 11.5px; color: var(--ink-faint); font-family: var(--font-mono); }
 .controlador-escolha-actions {
   display: flex;
@@ -1715,6 +1717,141 @@ body.anexo-preview-open .entity-drawer { right: 436px; }
 @keyframes liveTrackPulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(31, 157, 92, 0.35); }
   50% { box-shadow: 0 0 0 4px rgba(31, 157, 92, 0); }
+}
+
+/* ---------- painel "Testar tempo real" — programação das fases (flutuante, base do mapa) ---------- */
+/* Versão ao vivo da aba "Plano" do sistema real: uma linha por fase, trilha do ciclo inteiro
+   (vermelho/amarelo/verde na proporção real) e uma agulha vermelha compartilhada que varre
+   a trilha em tempo real, mostrando de relance quem está verde/vermelho a cada instante. */
+.teste-painel {
+  position: fixed;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  z-index: 700;
+  width: min(600px, calc(100vw - 40px));
+  background: rgba(22, 26, 32, 0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 14px 18px 16px;
+  color: #fff;
+}
+.teste-painel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.teste-painel-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff3b30;
+  box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.5);
+  animation: testePainelDotPulse 1.2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+@keyframes testePainelDotPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.5); }
+  50% { box-shadow: 0 0 0 5px rgba(255, 59, 48, 0); }
+}
+.teste-painel-controlador {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 13.5px;
+}
+.teste-painel-ciclo {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+}
+.teste-painel-close {
+  margin-left: auto;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+}
+.teste-painel-close:hover { background: rgba(255, 255, 255, 0.16); color: #fff; }
+.teste-painel-close svg { width: 13px; height: 13px; }
+
+.teste-painel-body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.teste-fase-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.teste-fase-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 66px;
+  flex-shrink: 0;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.85);
+}
+.teste-fase-label .pin-live-dot { flex-shrink: 0; }
+.teste-fase-track {
+  position: relative;
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.teste-fase-seg { position: absolute; top: 0; bottom: 0; }
+.teste-fase-seg--vermelho { background: #ff3b30; }
+.teste-fase-seg--amarelo { background: #ffd60a; }
+.teste-fase-seg--verde { background: #30d158; }
+
+/* Agulha compartilhada: cobre a altura inteira das trilhas, alinhada com a coluna delas
+   (deslocada pela largura fixa de .teste-fase-label + o gap da linha). "transition: left"
+   é o que dá o efeito de relógio andando — cada tick move 1s de posição, suavizado ao longo
+   do próprio segundo seguinte, em vez de pular seco. Bem mais grossa/brilhante que uma linha
+   de 2px pra não se perder no fundo translúcido do painel — é o elemento mais importante ali.
+   z-index acima das trilhas explicitamente (não confiar só na ordem do DOM). */
+.teste-painel-needle {
+  position: absolute;
+  top: 46px;
+  bottom: 16px;
+  width: 3px;
+  margin-left: 75px;
+  background: #ff5b4d;
+  box-shadow: 0 0 4px 1px #ff3b30, 0 0 16px 3px rgba(255, 59, 48, 0.85), 0 0 28px rgba(255, 59, 48, 0.5);
+  border-radius: 2px;
+  transition: left 1s linear;
+  pointer-events: none;
+  z-index: 2;
+}
+.teste-painel-needle::before {
+  content: "";
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #ff5b4d;
+  box-shadow: 0 0 3px 1px #ff3b30, 0 0 12px rgba(255, 59, 48, 0.9);
+  animation: testePainelDotPulse 1.2s ease-in-out infinite;
 }
 
 .entity-item {
@@ -2383,26 +2520,20 @@ body.anexo-preview-open .entity-drawer { right: 436px; }
    centro e girar na bolinha destacada. */
 .map-rotate-handle {
   position: relative;
-  width: 10px;
-  height: 10px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 50%;
   background: var(--amber);
   border: 2px solid #fff;
   box-shadow: var(--shadow-sm);
+  color: #fff;
   cursor: grab;
 }
-.map-rotate-handle::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 100%;
-  width: 2px;
-  height: 15px; /* alcança de volta a âncora da flecha (offset de -20px no JS) */
-  transform: translateX(-50%);
-  background: var(--amber);
-  box-shadow: 0 0 0 1px #fff;
-  pointer-events: none;
-}
+.map-rotate-handle:active { cursor: grabbing; }
+.map-rotate-handle svg { width: 15px; height: 15px; display: block; }
 
 /* um em cada canto da caixa da flecha (4 no total) — arrasta qualquer um pra redimensionar
    só ela (escala uniforme), isolado do pin */
@@ -2416,19 +2547,24 @@ body.anexo-preview-open .entity-drawer { right: 436px; }
   cursor: nwse-resize;
 }
 
-/* alça invisível grudada na própria flecha, só pra dar uma área de arraste maior/mais
-   fácil de pegar do que o ícone sozinho (que já aparece desenhado por baixo dela). Maior
-   que a bolinha de rotação (por cima dela) de propósito — sobra um anel clicável só de
-   mover em volta da bolinha. */
+/* alça de mover a flecha — círculo visível centrado na flecha, com um ícone de 4 setas.
+   Antes era invisível e o usuário tinha que adivinhar onde pegar. O default da flecha
+   nasce ~65px acima do pin, então este círculo de 30px não encosta no pin; se o usuário
+   aproximar a flecha do pin, o pin ainda é arrastável direto e some as alças no dragstart. */
 .map-arrow-move-handle {
-  width: 32px;
-  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
-  background: transparent;
-  border: 1.5px dashed transparent;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1.5px dashed var(--amber);
+  color: var(--amber);
   cursor: move;
 }
-.map-arrow-move-handle:hover { border-color: rgba(37, 99, 168, 0.4); }
+.map-arrow-move-handle:hover { background: rgba(255, 255, 255, 0.8); }
+.map-arrow-move-handle svg { width: 16px; height: 16px; display: block; }
 
 .map-text-pin {
   max-width: 200px;
@@ -2997,7 +3133,7 @@ body.anexo-preview-open .entity-drawer { right: 436px; }
   border: 2px solid #fff;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
-.editor-page .controlador-chip-icon { color: #fff; background: var(--red); border-radius: 50%; }
+.editor-page .controlador-chip-icon { color: #fff; background: var(--amber); border-radius: 50%; }
 
 /* Reposiciona a toolbar/busca/drawer flutuantes pra caber no header e no painel novos —
    a lógica e o HTML de cada um continuam exatamente os mesmos. O seletor de croqui saiu
