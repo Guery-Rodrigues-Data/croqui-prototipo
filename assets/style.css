@@ -2288,8 +2288,8 @@ body.anexo-preview-open .entity-drawer { right: 436px; }
   transition: filter 0.15s ease, opacity 0.15s ease;
 }
 .map-group-svgpin svg { width: 100%; height: 100%; display: block; }
-.map-group-svgpin--veicular { width: 20px; height: 35px; }
-.map-group-svgpin--pedestre { width: 24px; height: 28px; }
+.map-group-svgpin--veicular { width: 23px; height: 40px; }
+.map-group-svgpin--pedestre { width: 28px; height: 33px; }
 .map-group-svgpin.is-selected { outline: 3px solid var(--amber); outline-offset: 2px; border-radius: 6px; }
 .map-group-svgpin.is-dimmed { opacity: 0.38; }
 /* repetidor não tem mais borda própria pra tracejar (o balão já vem com a cor fixa do SVG)
@@ -2301,8 +2301,8 @@ body.anexo-preview-open .entity-drawer { right: 436px; }
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 42px;
-  height: 42px;
+  width: 48px;
+  height: 48px;
   transform: translate(-50%, -50%);
   border-radius: 50%;
   border: 2px dashed rgba(255, 255, 255, 0.85);
@@ -2375,6 +2375,16 @@ body.anexo-preview-open .entity-drawer { right: 436px; }
 .map-group-pin-arrow.is-live-vermelho { color: #ff3b30; }
 .map-group-pin-arrow.is-live-amarelo { color: #ffd60a; }
 .map-group-pin-arrow.is-live-verde { color: #30d158; }
+/* contorno branco de 2px na flecha durante o teste — as cores vivas (vermelho/amarelo/verde)
+   ficam mais destacadas do fundo do mapa com esse contorno do que só o halo borrado que a
+   flecha já tem sempre (drop-shadow em .map-group-pin-arrow) */
+.map-group-pin-arrow.is-live-vermelho svg path,
+.map-group-pin-arrow.is-live-amarelo svg path,
+.map-group-pin-arrow.is-live-verde svg path {
+  stroke: #fff;
+  stroke-width: 2;
+  paint-order: stroke fill;
+}
 
 /* linha fina ligando o pin à flecha, quando ela foi arrastada pra longe — nasce no centro
    do pin (mesma origem 0,0) e se estende por "width" na direção da flecha. */
