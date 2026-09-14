@@ -1266,23 +1266,21 @@ body.anexo-preview-open .entity-drawer { right: 436px; }
 .controlador-escolha-actions .btn-primary,
 .controlador-escolha-actions .btn-secondary { flex: 1; padding: 9px 12px; font-size: 13px; }
 
-/* Pin dos controladores soltos (cadastrados, sem croqui vinculado ainda) no mapa do
-   editor — ícone de armário/controlador, cor âmbar pra diferenciar dos pins de croqui
-   (vermelho/cinza) e dos grupos focais (azul/roxo). */
-.map-controlador-solto-pin {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: var(--amber);
-  color: #fff;
-  border: 2px solid #fff;
-  box-shadow: var(--shadow-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* Pin dos controladores soltos (cadastrados, sem croqui vinculado ainda) e o "flash" de
+   localização física no mapa do editor — agora o balão completo do Guery (Documents/Icones/
+   controlador-icone.svg), que já vem com cor própria embutida; só tamanho/sombra/cursor
+   ficam por conta do CSS (perdeu a distinção de cor âmbar/ink entre solto e físico que o
+   círculo antigo tinha — os dois usam o mesmo ícone agora). */
+.map-controlador-solto-pin,
+.map-controlador-fisico-pin {
+  display: block;
   cursor: pointer;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35));
 }
-.map-controlador-solto-pin svg { width: 14px; height: 14px; }
+.map-controlador-solto-pin svg,
+.map-controlador-fisico-pin svg { width: 100%; height: 100%; display: block; }
+.map-controlador-solto-pin { width: 24px; height: 28px; }
+.map-controlador-fisico-pin { width: 26px; height: 30px; }
 .map-controlador-posicao-local { position: relative; }
 .map-controlador-posicao-local-badge {
   position: absolute;
@@ -1299,22 +1297,6 @@ body.anexo-preview-open .entity-drawer { right: 436px; }
   border: 1.5px solid #fff;
 }
 .map-controlador-posicao-local-badge svg { width: 9px; height: 9px; }
-/* "Ver no mapa onde está o controlador físico" (mostrarLocalizacaoFisicaControlador) —
-   mesmo desenho do pino comum, mas na cor de destaque (--ink) pra ficar óbvio que é um
-   "flash" temporário apontando o cruzamento de origem, não um marcador do desenho. */
-.map-controlador-fisico-pin {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: var(--ink);
-  color: #fff;
-  border: 2px solid #fff;
-  box-shadow: var(--shadow-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.map-controlador-fisico-pin svg { width: 16px; height: 16px; }
 
 .editor-form {
   position: relative;
@@ -2289,6 +2271,72 @@ body.anexo-preview-open .entity-drawer { right: 436px; }
 .map-group-pin--pedestre.is-live-vermelho { background: #ff3b30; border-color: #b8241c; }
 .map-group-pin--pedestre.is-live-verde { background: #30d158; border-color: #1f9d5c; }
 
+/* Pino de grupo focal (veicular/pedestre) só no editor de croqui — balão completo do Guery
+   (Documents/Icones), ponta apontando o lat/lng exato (por isso o groupIcon() ancora em
+   -100% no eixo Y, não mais -50%). Classe própria (map-group-svgpin, não map-group-pin) pra
+   não mexer no pino antigo (círculo + letra) que a Apresentação em tempo real ainda usa. */
+.map-group-svgpin {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 1;
+  display: block;
+  cursor: pointer;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35));
+  transition: filter 0.15s ease, opacity 0.15s ease;
+}
+.map-group-svgpin svg { width: 100%; height: 100%; display: block; }
+.map-group-svgpin--veicular { width: 20px; height: 35px; }
+.map-group-svgpin--pedestre { width: 24px; height: 28px; }
+.map-group-svgpin.is-selected { outline: 3px solid var(--amber); outline-offset: 2px; border-radius: 6px; }
+.map-group-svgpin.is-dimmed { opacity: 0.38; }
+/* repetidor não tem mais borda própria pra tracejar (o balão já vem com a cor fixa do SVG)
+   — um anel tracejado solto ao redor do pino cumpre o mesmo papel de sinalizar "isso é um
+   repetidor, não o grupo original". */
+.map-group-svgpin.is-repetidor { opacity: 0.88; }
+.map-group-svgpin.is-repetidor::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 42px;
+  height: 42px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px dashed rgba(255, 255, 255, 0.85);
+  pointer-events: none;
+}
+/* semáforo veicular "ao vivo": apaga as luzes que não são a atual, igual um sinaleiro de
+   verdade (a luz ativa continua com a cor própria do SVG) */
+.map-group-svgpin--veicular.is-live-vermelho .semaforo-luz:not(.semaforo-luz--vermelho),
+.map-group-svgpin--veicular.is-live-amarelo .semaforo-luz:not(.semaforo-luz--amarelo),
+.map-group-svgpin--veicular.is-live-verde .semaforo-luz:not(.semaforo-luz--verde) {
+  opacity: 0.18;
+}
+/* pedestre "ao vivo": o fundo do balão continua preto sempre; só o bonequinho (classe
+   pedestre-pin-figure no SVG) muda pra vermelho/verde, igual a luz do sinaleiro */
+.map-group-svgpin--pedestre.is-live-vermelho .pedestre-pin-figure { fill: #ff3b30; }
+.map-group-svgpin--pedestre.is-live-verde .pedestre-pin-figure { fill: #30d158; }
+/* badge do id (G1, G2...) grudado embaixo do pino — o SVG não tem espaço pra texto */
+.map-group-pin-badge {
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  margin-top: 4px;
+  transform: translateX(-50%);
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  padding: 2px 6px;
+  border-radius: 8px;
+  border: 1.5px solid #fff;
+  box-shadow: var(--shadow-md);
+}
+
 .map-group-pin-arrow {
   position: absolute;
   display: inline-flex;
@@ -2911,11 +2959,11 @@ body.anexo-preview-open .entity-drawer { right: 436px; }
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
 }
 .listagem-legend-ctrl {
-  width: 22px;
+  width: 19px;
   height: 22px;
   flex-shrink: 0;
 }
-.listagem-legend-ctrl svg { width: 12px; height: 12px; }
+.listagem-legend-ctrl svg { width: 100%; height: 100%; }
 
 .listagem-map-search {
   top: 101px;
@@ -2924,6 +2972,7 @@ body.anexo-preview-open .entity-drawer { right: 436px; }
 }
 
 .listagem-marker {
+  position: relative;
   width: 26px;
   height: 32.5px;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35));
@@ -2931,6 +2980,22 @@ body.anexo-preview-open .entity-drawer { right: 436px; }
 }
 .listagem-marker svg { width: 100%; height: 100%; display: block; }
 .listagem-marker.is-selected { transform: scale(1.18); }
+/* selo de check — croqui já tem grupo focal cadastrado (ver pinIconSvg) */
+.listagem-marker-check {
+  position: absolute;
+  top: -1px;
+  right: -3px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--green);
+  border: 1.5px solid #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.listagem-marker-check svg { width: 8px; height: 8px; }
 
 .listagem-tooltip {
   background: #1f2937;
@@ -2965,12 +3030,12 @@ body.anexo-preview-open .entity-drawer { right: 436px; }
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: var(--red);
+  background: var(--ink);
   color: #fff;
   font-family: var(--font-body);
   font-weight: 700;
   font-size: 13px;
-  box-shadow: 0 0 0 6px rgba(215, 25, 32, 0.18), 0 2px 6px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 0 6px rgba(22, 26, 32, 0.18), 0 2px 6px rgba(0, 0, 0, 0.3);
   cursor: pointer;
 }
 

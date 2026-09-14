@@ -76,8 +76,8 @@ const LEADER_LINE_THRESHOLD = 45; // px de tela — a partir daqui desenha a lin
 // Faixa de pedestre (zebra) — a marcação no chão do grupo focal pedestre, mesmo papel que
 // a flecha tem pro veicular (pedido da operação: pedestre também precisa de algo no chão
 // indicando por onde passa a faixa, já que hoje só o pino existe, sem nenhuma referência
-// de direção/posição da travessia).
-const ICON_FAIXA_PEDESTRE = `<svg viewBox="0 0 60 24" fill="currentColor"><rect x="0" y="0" width="7" height="24"/><rect x="12" y="0" width="7" height="24"/><rect x="24" y="0" width="7" height="24"/><rect x="36" y="0" width="7" height="24"/><rect x="48" y="0" width="7" height="24"/></svg>`;
+// de direção/posição da travessia). SVG do redesenho do Guery (Documents/Icones/Vector.svg).
+const ICON_FAIXA_PEDESTRE = `<svg viewBox="0 0 29 18" fill="currentColor"><path d="M4.19385 0.5C4.38271 0.501098 4.57761 0.50672 4.76807 0.523438C5.02937 0.546379 5.26839 0.664167 5.44873 0.821289C5.62896 0.978328 5.7863 1.20639 5.8335 1.48437C5.87399 1.72284 5.86183 2.03306 5.86182 2.18164V2.18262L5.86084 15.1719C5.86088 15.5366 5.86417 15.9183 5.85693 16.2939C5.85223 16.5381 5.76743 16.8016 5.60596 17.0068C5.47649 17.1712 5.32916 17.2915 5.15088 17.3711C4.98712 17.4441 4.82081 17.4708 4.69287 17.4893L4.6626 17.4941H4.63135C4.21536 17.502 3.79763 17.5006 3.38623 17.498H2.14795C1.93682 17.4949 1.42037 17.5505 0.997559 17.2363C0.663914 16.9885 0.551759 16.646 0.516113 16.3594C0.485242 16.1107 0.507242 15.7971 0.507324 15.6523L0.508301 14.3848L0.507324 2.68359C0.507238 2.36668 0.505021 2.02765 0.513184 1.69727C0.517 1.54305 0.559632 1.39198 0.60791 1.27246C0.656958 1.15112 0.72834 1.0198 0.820801 0.911133L0.935059 0.796875C1.21054 0.560658 1.54783 0.52495 1.7251 0.506836L1.74951 0.504883H1.7749L3.65478 0.501953L4.19385 0.5ZM11.2007 0.501953C11.5333 0.502017 11.9328 0.489977 12.314 0.523438C12.5751 0.546471 12.8144 0.664236 12.9946 0.821289C13.1748 0.978322 13.3322 1.2065 13.3794 1.48437C13.4199 1.72283 13.4068 2.03308 13.4067 2.18164V15.1709L13.4019 16.2939C13.3971 16.5382 13.3125 16.8015 13.1509 17.0068C13.0214 17.1713 12.8742 17.2915 12.6958 17.3711C12.5321 17.4441 12.3666 17.4708 12.2388 17.4893L12.2075 17.4941H12.1763C11.7603 17.502 11.3425 17.5006 10.9312 17.498H9.69287C9.48149 17.495 8.96596 17.5502 8.54346 17.2363C8.20959 16.9885 8.09767 16.6461 8.06201 16.3594C8.03113 16.1106 8.05216 15.7971 8.05225 15.6523L8.0542 14.3848L8.05322 2.68359C8.05314 2.36668 8.04994 2.02765 8.05811 1.69727C8.06192 1.54298 8.1055 1.392 8.15381 1.27246C8.20287 1.15109 8.2742 1.01982 8.3667 0.911133L8.47998 0.796875C8.75546 0.560464 9.09266 0.524959 9.27002 0.506836L9.29541 0.504883H9.31982L11.1997 0.501953H11.2007ZM18.7466 0.501953C19.079 0.502005 19.4779 0.490002 19.8589 0.523438C20.1202 0.546377 20.3592 0.664189 20.5395 0.821289C20.7198 0.978328 20.8771 1.20639 20.9243 1.48437C20.9648 1.72284 20.9526 2.03305 20.9526 2.18164V2.18262L20.9517 15.1719C20.9517 15.5366 20.955 15.9183 20.9478 16.2939C20.943 16.5381 20.8583 16.8016 20.6968 17.0068C20.5673 17.1712 20.42 17.2915 20.2417 17.3711C20.0781 17.444 19.9125 17.4708 19.7847 17.4893L19.7534 17.4941H19.7222C19.3062 17.502 18.8885 17.5006 18.477 17.498H17.2388C17.0276 17.4949 16.5112 17.5505 16.0884 17.2363C15.7548 16.9885 15.6436 16.646 15.6079 16.3594C15.577 16.1106 15.5981 15.7971 15.5981 15.6523L15.5991 14.3848L15.5981 2.68359C15.5981 2.36668 15.5958 2.02765 15.604 1.69727C15.6078 1.54306 15.6505 1.39197 15.6987 1.27246C15.7478 1.15114 15.8192 1.0198 15.9116 0.911133L16.0259 0.796875C16.3014 0.560619 16.6386 0.524951 16.8159 0.506836L16.8403 0.504883H16.8657L18.7456 0.501953H18.7466ZM26.2915 0.501953C26.6241 0.502017 27.0236 0.489976 27.4048 0.523438C27.666 0.546452 27.9052 0.664218 28.0854 0.821289C28.2656 0.978324 28.423 1.20647 28.4702 1.48437C28.5107 1.72283 28.4976 2.03307 28.4976 2.18164V15.1709C28.4976 15.5358 28.4999 15.9181 28.4927 16.2939C28.488 16.5382 28.4033 16.8015 28.2417 17.0068C28.1122 17.1713 27.965 17.2915 27.7866 17.3711C27.623 17.444 27.4575 17.4708 27.3296 17.4893L27.2983 17.4941H27.2681C26.8519 17.502 26.4335 17.5006 26.022 17.498H24.7847C24.5735 17.4949 24.0571 17.5504 23.6343 17.2363C23.3005 16.9885 23.1885 16.6461 23.1528 16.3594C23.122 16.1106 23.143 15.7971 23.1431 15.6523L23.145 14.3848L23.144 2.68359C23.144 2.36668 23.1408 2.02765 23.1489 1.69727C23.1527 1.54299 23.1963 1.392 23.2446 1.27246C23.2937 1.15109 23.365 1.01982 23.4575 0.911133L23.5708 0.796875C23.8462 0.560464 24.1834 0.524963 24.3608 0.506836L24.3862 0.504883H24.4116L26.2905 0.501953H26.2915Z"/></svg>`;
 
 // A flecha representa algo pintado no chão (a pista) — precisa ficar "grudada" no mesmo
 // ponto do cruzamento em qualquer zoom. A posição (arrowLat/arrowLng) já é um ponto
@@ -128,17 +128,17 @@ function groupIcon(g, selected, dimmed) {
   const arrowPt = map.latLngToContainerPoint(groupArrowLatLng(g));
   const ax = arrowPt.x - pinPt.x;
   const ay = arrowPt.y - pinPt.y;
-  // "Testar tempo real": estado simulado do grupo, pra colorir a marcação no chão igual ao
-  // sinaleiro naquele instante. Pedestre também colore o próprio pino (hábito de quando
-  // ele não tinha marcação nenhuma no chão, antes da faixa existir). O pino sempre mostra
-  // o "G1" — tentei mover ele pra dentro da marcação durante o tempo real, mas ficou ruim.
-  // Só liga a cor ao vivo pro controlador selecionado — testeLiveState guarda o estado de
-  // TODOS os controladores do croqui, mas o painel de fases (renderTestePainel) só mostra o
-  // selecionado; sem esse filtro aqui, um grupo de outro controlador (só esmaecido, não
-  // escondido) piscava com uma cor que não tinha nada a ver com o que o painel mostrava.
+  // "Testar tempo real": estado simulado do grupo. Antes só a marcação no chão mudava de cor
+  // pro veicular (pedestre também colorindo o próprio pino, que não tinha marcação nenhuma).
+  // Agora que o pino é o semáforo/pedestre do Guery (Documents/Icones), o pino reage nos
+  // dois tipos: no semáforo veicular apaga as luzes que não são a atual (ver semaforo-luz*
+  // em style.css); no pino de pedestre, um brilho na cor do estado. Só liga pro controlador
+  // selecionado — testeLiveState guarda o estado de TODOS os controladores do croqui, mas o
+  // painel de fases (renderTestePainel) só mostra o selecionado; sem esse filtro aqui, um
+  // grupo de outro controlador (só esmaecido, não escondido) piscava com uma cor que não
+  // tinha nada a ver com o que o painel mostrava.
   const liveState = testeTempoRealAtivo && g.controladorId === selectedControladorId ? testeLiveState[faseKey(g)] : null;
   const liveClass = liveState ? ` is-live-${liveState.cor}` : "";
-  const pinLiveClass = g.tipo === "pedestre" ? liveClass : "";
   const rotationDeg = g.rotationDeg || 0;
   const groundIconSvg = g.tipo === "veicular" ? iconDirecao(g.direcao) : ICON_FAIXA_PEDESTRE;
   let arrowHtml = "";
@@ -151,11 +151,21 @@ function groupIcon(g, selected, dimmed) {
       leaderHtml = `<span class="map-group-leader-line" style="width:${Math.round(dist)}px; transform:rotate(${lineDeg - 90}deg);"></span>`;
     }
   }
-  const pinTipoClass = g.tipo === "veicular" ? "map-group-pin--veicular" : "map-group-pin--pedestre";
+  const pinTipoClass = g.tipo === "veicular" ? "map-group-svgpin--veicular" : "map-group-svgpin--pedestre";
+  const pinSvg = g.tipo === "veicular" ? ICON_SEMAFORO_PIN : ICON_PEDESTRE_PIN;
+  // Pino agora é o desenho completo (balão com ponta) em vez do círculo com o id dentro —
+  // a ponta é o ponto exato do lat/lng (por isso o anchor vira -100% no eixo Y, não mais
+  // -50%); o id vira um badge grudado embaixo do pino, já que o SVG não tem espaço pra texto.
+  // Classe própria (map-group-svgpin, não mais map-group-pin) pra não colidir com o pino
+  // antigo (círculo + letra) que a tela de Apresentação em tempo real (apresentacao.js)
+  // ainda usa — telas diferentes, sem motivo pra redesenhar as duas juntas agora.
   return L.divIcon({
     html: `<div class="map-group-marker">
              ${leaderHtml}
-             <div class="map-group-pin ${pinTipoClass}${selected ? " is-selected" : ""}${repetidorClass}${dimmedClass}${pinLiveClass}" style="transform:translate(-50%,-50%) scale(${pinScale})"><span>${previewGrupoId(g)}</span></div>
+             <div class="map-group-svgpin ${pinTipoClass}${selected ? " is-selected" : ""}${repetidorClass}${dimmedClass}${liveClass}" style="transform:translate(-50%,-100%) scale(${pinScale})">
+               ${pinSvg}
+               <span class="map-group-pin-badge">${previewGrupoId(g)}</span>
+             </div>
              ${arrowHtml}
            </div>`,
     className: "", iconAnchor: [0, 0],
@@ -952,8 +962,8 @@ function destacarControladorEscolhaNoMapa(c) {
   limparDestaqueControladorEscolha();
   if (c.lat == null || c.lng == null) return;
   const icon = L.divIcon({
-    html: `<div class="map-controlador-fisico-pin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 7h.01M8 11h.01M8 15h.01M13 7h3M13 11h3M13 15h3"/></svg></div>`,
-    className: "", iconSize: [30, 30], iconAnchor: [15, 15],
+    html: `<div class="map-controlador-fisico-pin">${ICON_CONTROLADOR_PIN}</div>`,
+    className: "", iconSize: [26, 30], iconAnchor: [13, 30],
   });
   controladorEscolhaDestaqueMarker = L.marker([c.lat, c.lng], { icon, interactive: false, zIndexOffset: 1500 }).addTo(map);
   controladorEscolhaDestaqueMarker.bindTooltip(`<strong>${escapeHtml(c.id)}</strong><span class="listagem-tooltip-id">${escapeHtml(c.via || c.croquiNome || "")}</span>`, {
@@ -1076,8 +1086,8 @@ function renderControladoresSoltosLayer() {
   controladoresSoltosLayer = L.layerGroup(
     soltos.map((c) => {
       const icon = L.divIcon({
-        html: `<div class="map-controlador-solto-pin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 7h.01M8 11h.01M8 15h.01M13 7h3M13 11h3M13 15h3"/></svg></div>`,
-        className: "", iconSize: [26, 26], iconAnchor: [13, 13],
+        html: `<div class="map-controlador-solto-pin">${ICON_CONTROLADOR_PIN}</div>`,
+        className: "", iconSize: [24, 28], iconAnchor: [12, 28],
       });
       const marker = L.marker([c.lat, c.lng], { icon, draggable: true });
       // Como agora o pin fica sempre visível mesmo depois de vinculado (nível de teste),
@@ -2454,8 +2464,8 @@ function mostrarLocalizacaoFisicaControlador(id) {
   if (localizacaoFisicaTimeout) { clearTimeout(localizacaoFisicaTimeout); localizacaoFisicaTimeout = null; }
 
   const icon = L.divIcon({
-    html: `<div class="map-controlador-fisico-pin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 7h.01M8 11h.01M8 15h.01M13 7h3M13 11h3M13 15h3"/></svg></div>`,
-    className: "", iconSize: [30, 30], iconAnchor: [15, 15],
+    html: `<div class="map-controlador-fisico-pin">${ICON_CONTROLADOR_PIN}</div>`,
+    className: "", iconSize: [26, 30], iconAnchor: [13, 30],
   });
   localizacaoFisicaMarker = L.marker(pos, { icon, interactive: false, zIndexOffset: 1400 }).addTo(map);
   localizacaoFisicaMarker.bindTooltip(`<strong>${escapeHtml(c.id)} — controlador físico</strong><span class="listagem-tooltip-id">${escapeHtml(rotulo)}</span>`, {
