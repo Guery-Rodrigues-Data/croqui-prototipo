@@ -40,6 +40,13 @@ let selectedControladorId = null; // qual controlador está "ativo" — filtra a
 let filtroVeicular = true; // painel de Filtros — mostrar grupos veiculares no mapa/lista
 let filtroPedestre = true; // painel de Filtros — mostrar grupos de pedestre no mapa/lista
 let mostrarDirecoes = true; // painel de Filtros — mostrar a seta de direção nos marcadores veiculares do mapa
+// botão próprio na toolbar (toggleAreaLinhaBtn) — mostrar a linha vermelha da área do
+// cruzamento já salva. Pedido da operação: depois que a área está definida, a linha
+// atrapalha a leitura do croqui com vários grupos focais/flechas em cima; desliga só o
+// traço/preenchimento (ver destacarAreaComoAlvo), não desfaz nem esconde a área em si.
+// Croqui reaberto já com área salva (detail.area) começa com a linha desativada — só quem
+// está desenhando a área pela primeira vez (ainda sem detail.area) precisa vê-la de cara.
+let mostrarArea = !detail.area;
 let testeTempoRealAtivo = false; // "Testar tempo real" — preview rápido das cores direto na lista, sem sair do editor
 let testeLiveState = {};
 let testeLiveInterval = null;
@@ -447,6 +454,23 @@ document.getElementById("fDirecoes").addEventListener("change", (e) => {
   mostrarDirecoes = e.target.checked;
   renderMarkers();
 });
+// Botão próprio na toolbar (não escondido dentro do painel de Filtros) — pedido da
+// operação: a linha vermelha da área atrapalha depois que o croqui já está desenhado.
+// Só troca o innerHTML do <svg> (não o elemento inteiro), pra não perder o id/listener.
+const ICON_AREA_LINHA_ON = `<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>`;
+const ICON_AREA_LINHA_OFF = `<path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.15 13.15 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.53 13.53 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/>`;
+function syncAreaLinhaBtn() {
+  const btn = document.getElementById("toggleAreaLinhaBtn");
+  btn.classList.toggle("is-active", mostrarArea);
+  btn.title = mostrarArea ? "Ocultar linha da área" : "Mostrar linha da área";
+  document.getElementById("toggleAreaLinhaIcon").innerHTML = mostrarArea ? ICON_AREA_LINHA_ON : ICON_AREA_LINHA_OFF;
+}
+syncAreaLinhaBtn(); // reflete o valor inicial de mostrarArea (depende de detail.area) no botão, que no HTML nasce fixo em "ligado"
+document.getElementById("toggleAreaLinhaBtn").addEventListener("click", () => {
+  mostrarArea = !mostrarArea;
+  syncAreaLinhaBtn();
+  destacarAreaComoAlvo(activeTool === "veicular" || activeTool === "pedestre");
+});
 document.addEventListener("click", (e) => {
   const panel = document.getElementById("filtrosPanel");
   if (panel.style.display === "none") return;
@@ -586,7 +610,9 @@ function setTool(tool) {
   if (activeTool === "imagem" && tool !== "imagem") removeAreaImagemHandles();
   if (activeTool === "regua" && tool !== "regua") clearRegua();
   activeTool = tool;
-  document.querySelectorAll(".editor-tool").forEach((b) => b.classList.toggle("is-active", b.dataset.tool === tool));
+  // Só os botões COM data-tool entram nessa troca de destaque — toggleAreaLinhaBtn (e outros
+  // botões da toolbar sem data-tool, tipo areaMenuBtn) controlam o próprio is-active à parte.
+  document.querySelectorAll(".editor-tool[data-tool]").forEach((b) => b.classList.toggle("is-active", b.dataset.tool === tool));
   document.getElementById("map").style.cursor = tool === "cursor" || tool === "imagem" ? "" : "crosshair";
   if (tool === "imagem") addAreaImagemHandles();
   // Fluxo guiado: ao ativar veicular/pedestre (sempre pra COLOCAR um novo, editar um já
@@ -598,9 +624,10 @@ function setTool(tool) {
 
 function destacarAreaComoAlvo(ativo) {
   if (!areaLayer) return;
+  if (!mostrarArea) { areaLayer.setStyle({ opacity: 0, fillOpacity: 0 }); return; }
   areaLayer.setStyle(ativo
-    ? { weight: 4, dashArray: "6 4", fillOpacity: 0.16 }
-    : { weight: 2, dashArray: null, fillOpacity: 0.06 });
+    ? { opacity: 1, weight: 4, dashArray: "6 4", fillOpacity: 0.16 }
+    : { opacity: 1, weight: 2, dashArray: null, fillOpacity: 0.06 });
 }
 document.querySelectorAll(".editor-tool[data-tool]").forEach((btn) => btn.addEventListener("click", () => {
   if (btn.dataset.tool === "imagem") {
@@ -779,6 +806,7 @@ function commitArea(vertices) {
   renderAreaImagem(); // primeiro, pra ficar embaixo do contorno da área no z-index
   if (areaLayer) map.removeLayer(areaLayer);
   areaLayer = L.polygon(vertices, { color: "#e0342b", weight: 2, fillColor: "#e0342b", fillOpacity: 0.06, interactive: false }).addTo(map);
+  destacarAreaComoAlvo(activeTool === "veicular" || activeTool === "pedestre"); // reaplica o toggle "Mostrar linha da área" (fArea) numa camada recém-criada
 
   if (!detail.controladores) detail.controladores = [];
   if (detail.controladores.length === 0) {
@@ -1421,6 +1449,7 @@ function renderArea() {
   if (areaLayer) { map.removeLayer(areaLayer); areaLayer = null; }
   if (detail.area) {
     areaLayer = L.polygon(detail.area, { color: "#e0342b", weight: 2, fillColor: "#e0342b", fillOpacity: 0.06, interactive: false }).addTo(map);
+    destacarAreaComoAlvo(activeTool === "veicular" || activeTool === "pedestre"); // reaplica o toggle "Mostrar linha da área" (fArea)
   }
   document.getElementById("areaMenuBtn").title = detail.area ? "Editar área do cruzamento" : "Área do cruzamento";
 }
