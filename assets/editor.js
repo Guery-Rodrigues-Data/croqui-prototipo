@@ -3289,18 +3289,7 @@ if (!croquiId) iniciarCapturaAreaSeguindoMapa();
 // (a função nem existe pra ser chamada de verdade fazer fetch algum).
 if (typeof sincronizarDaSheetsSeNecessario === "function") {
   sincronizarDaSheetsSeNecessario(croquiId, (remoto) => {
-    detail.area = remoto.area || detail.area;
-    detail.grupos = remoto.grupos || detail.grupos;
-    detail.textos = (remoto.textos || []).map((t) => {
-      const local = (detail.textos || []).find((x) => x.id === t.id);
-      return local && local.anexos ? { ...t, anexos: local.anexos } : t;
-    });
-    if (remoto.controladores && detail.controladores) {
-      detail.controladores = detail.controladores.map((c) => {
-        const r = remoto.controladores.find((x) => x.id === c.id);
-        return r && r.posicaoLocal ? { ...c, posicaoLocal: r.posicaoLocal } : c;
-      });
-    }
+    aplicarPosicoesRemotasEm(detail, remoto);
     renderArea();
     renderMarkers();
     renderControlador();
