@@ -136,7 +136,8 @@
 
 <script src="assets/app.js"></script>
 <script src="assets/data.js"></script>
-<script src="assets/sheets-sync.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="assets/supabase-sync.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script>
@@ -165,7 +166,7 @@ function openCroqui(id) {
   window.location.href = `editor-croqui.html?id=${id}`;
 }
 
-// Chave liga/desliga — ver assets/sheets-sync.js. Desligada por padrão, não faz nada.
+// Chave liga/desliga — ver assets/supabase-sync.js.
 // Roda em segundo plano ao entrar na listagem, sem travar nada na tela — ver comentário
 // em sincronizarTodosEmBackground sobre por que isso evita o editor "piscar" (mostrar o
 // dado antigo e só depois atualizar) quando um croqui mudou na planilha.

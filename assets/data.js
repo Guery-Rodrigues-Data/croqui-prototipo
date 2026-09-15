@@ -1384,8 +1384,8 @@ function writeOverride(croqui) {
     showToast("Não deu pra salvar — armazenamento local cheio (anexos ou fotos grandes?).");
   }
   enviarBackupParaArquivo();
-  // Chave liga/desliga — ver assets/sheets-sync.js. Desligada por padrão, não faz nada.
-  if (typeof agendarEnvioSheets === "function") agendarEnvioSheets(croqui);
+  // Chave liga/desliga — ver assets/supabase-sync.js.
+  if (typeof agendarEnvioSupabase === "function") agendarEnvioSupabase(croqui);
 }
 
 function readDeletedIds() {

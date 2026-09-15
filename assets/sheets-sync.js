@@ -24,7 +24,9 @@
 // essas duas chamadas guardadas.
 // ---------------------------------------------------------------------------
 
-const SHEETS_SYNC_ENABLED = true;
+// Substituído pelo Supabase em 15/09/2026 (ver assets/supabase-sync.js) — arquivo mantido
+// só de referência/rollback, não carregado em nenhum HTML.
+const SHEETS_SYNC_ENABLED = false;
 const SHEETS_SYNC_URL = "https://script.google.com/macros/s/AKfycbwkRHZc5wsqfnCm1L_wh5IyYYg7mvHbOBKNosBAHW_16qMfUTl3baym-frIyrXbI9co/exec";
 
 // Guarda, por croqui, o "atualizado" (ISO) da versão mais recente que ESTE navegador já

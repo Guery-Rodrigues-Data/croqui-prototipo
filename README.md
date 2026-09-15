@@ -39,38 +39,38 @@ site já abre com os croquis cadastrados. Depois disso o `localStorage` volta a 
 atualizar o que aparece no deploy: rodar local, salvar os croquis (o `backup-dados.json` é
 regravado), commitar e dar push.
 
-## Sincronização de posições via Google Sheets (experimental)
+## Sincronização de posições via Supabase
 
 O ponto acima (`localStorage`) é por navegador: se você manda o link do deploy pra alguém
-mexer no croqui, o que essa pessoa posicionar fica só no navegador dela — você não vê depois.
-`assets/sheets-sync.js` resolve isso, mas é uma chave liga/desliga, desligada por padrão
-(`SHEETS_SYNC_ENABLED = false`), sem afetar nada até você ativar.
+mexer no croqui, o que essa pessoa posicionar fica só no navegador dela — sem isso, você não
+veria depois. `assets/supabase-sync.js` resolve isso com um banco Postgres de verdade
+(Supabase), chave liga/desliga em `SUPABASE_SYNC_ENABLED` (hoje `true`).
 
-O que ele sincroniza: só posição (área do cruzamento, grupos focais, anotações,
-controladores vinculados). Imagem importada da área e anexos de anotação **não** entram —
-são base64 e estourariam o limite de caracteres de uma célula do Sheets, continuam só no
-`localStorage`/backup local de quem os anexou.
+**Schema** (`supabase/schema.sql`): `croquis`, `controladores` (cadastro independente, pode
+participar de zero, um ou vários croquis), `croqui_controladores` (ligação N:N, com posição
+local por croqui e a flag `virtual`), `grupos_focais` e `anotacoes` (um-pra-muitos por
+croqui). Todo `atualizado` é gravado por um **gatilho no servidor**, nunca pelo cliente — é o
+que evita a classe de bug que tínhamos com o Sheets (registro sem timestamp confiável
+revertendo uma edição local pro estado antigo, mesmo sem F5). A escrita passa por uma função
+Postgres só (`upsert_croqui_completo`), que faz upsert + apaga o que foi removido numa
+transação atômica, um único round-trip.
 
-**Pra ativar:**
-1. Crie uma planilha Google nova (em branco).
-2. Nela, `Extensões > Apps Script`, apague o conteúdo padrão e cole o conteúdo de
-   `apps-script/sync.gs`.
-3. `Implantar > Nova implantação` → tipo "App da Web" → Executar como **Eu**, Quem pode
-   acessar **Qualquer pessoa**. Autorize quando pedir e copie a URL gerada (termina em
-   `/exec`).
-4. Em `assets/sheets-sync.js`, cole essa URL em `SHEETS_SYNC_URL` e troque
-   `SHEETS_SYNC_ENABLED` para `true`.
-5. Redeploy (ou teste local) — ao salvar um croqui, a planilha ganha uma aba "posicoes"
-   automaticamente; ao abrir um croqui existente, o editor busca o que estiver lá e aplica
-   por cima do local.
+O que sincroniza: só posição (área do cruzamento, grupos focais, anotações, controladores
+vinculados). Imagem importada da área e anexos de anotação **não** entram — são base64,
+continuam só no `localStorage`/backup local de quem os anexou.
 
-**Pra desligar / desfazer:** `SHEETS_SYNC_ENABLED = false` já é suficiente — nenhuma outra
-parte do protótipo depende disso. Pra remover de vez: apague `assets/sheets-sync.js`,
-`apps-script/sync.gs`, a tag `<script>` dele em `editor-croqui.html`, e as duas chamadas
-guardadas por `typeof ... === "function"` em `assets/data.js` (`writeOverride`) e
-`assets/editor.js` (bootstrap).
+**Credenciais:** guardadas fora do repo (memória local do Guery) — a chave publicável
+(`sb_publishable_...`) já está hardcoded em `assets/supabase-sync.js` (é segura por design,
+o controle de acesso é via RLS no Postgres, não por a chave ser secreta). A chave secreta
+(`sb_secret_...`) e a senha do Postgres **nunca** vão pro código — só usadas pontualmente
+pra rodar `supabase/schema.sql` ou alterar o schema.
 
-**Limitações conhecidas** (aceitáveis pra um teste, não pra produção): sem trava de
-concorrência — se duas pessoas salvarem ao mesmo tempo, a última escrita ganha; e cada
-chamada ao Apps Script Web App tem uma latência perceptível (visível só como um toast
-"Posições atualizadas..." pouco depois de abrir o croqui — não trava a tela).
+**Pra desligar / desfazer:** `SUPABASE_SYNC_ENABLED = false` em `assets/supabase-sync.js` já
+é suficiente. A sincronização antiga via Google Sheets (`assets/sheets-sync.js`,
+`apps-script/sync.gs`) continua no repo desligada, só de referência.
+
+**Limitações conhecidas** (aceitáveis pra esse estágio, não pra produção): RLS aberto pra
+leitura/escrita geral via a chave publicável, sem restrição por usuário (não tem login
+ainda); sem trava de concorrência linha-a-linha entre dois saves simultâneos do mesmo
+croqui (o `atualizado` do servidor evita reverter uma edição mais nova, mas não impede dois
+saves quase ao mesmo tempo de se sobrescreverem — última escrita ganha).

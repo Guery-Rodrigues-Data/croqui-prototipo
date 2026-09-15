@@ -3285,10 +3285,9 @@ if (detail.area) fitAreaBounds();
 // o drawStatus do preview (ver comentário em renderHint sobre não duplicar mensagem).
 if (!croquiId) iniciarCapturaAreaSeguindoMapa();
 
-// Chave liga/desliga — ver assets/sheets-sync.js. Desligada por padrão, não faz nada
-// (a função nem existe pra ser chamada de verdade fazer fetch algum).
-if (typeof sincronizarDaSheetsSeNecessario === "function") {
-  sincronizarDaSheetsSeNecessario(croquiId, (remoto) => {
+// Chave liga/desliga — ver assets/supabase-sync.js.
+if (typeof sincronizarDaSupabaseSeNecessario === "function") {
+  sincronizarDaSupabaseSeNecessario(croquiId, (remoto) => {
     aplicarPosicoesRemotasEm(detail, remoto);
     renderArea();
     renderMarkers();
