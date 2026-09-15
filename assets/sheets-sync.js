@@ -110,21 +110,25 @@ function agendarEnvioSheets(detail) {
   }, 600);
 }
 
-// Busca o remoto pra um id e devolve null se a planilha não tiver nada mais novo do que
-// este navegador já conhece (ver SHEETS_SYNC_TS_KEY acima) — usado tanto pelo pull de um
-// croqui aberto no editor quanto pelo sincronizarTodosEmBackground da listagem, abaixo.
+// Busca o remoto pra um id e devolve null se não for seguro aplicar por cima do local —
+// usado tanto pelo pull de um croqui aberto no editor quanto pelo sincronizarTodosEmBackground
+// da listagem, abaixo.
 //
-// Registros salvos antes dessa trava existir (sem campo "atualizado" no payload) ainda
-// são aplicados sem comparação — não tem como saber a idade deles, então o comportamento
-// cai pro de antes (planilha sempre ganha) só nesse caso específico.
+// Registro sem campo "atualizado" (salvo antes dessa trava existir) NUNCA é aplicado —
+// primeira versão disto tratava "sem info" como "aplica assim mesmo" (mantendo o
+// comportamento antigo), e isso causou perda de dado de verdade em 15/09/2026: croquis com
+// um registro antigo e vazio na planilha (de teste, sem edição real) tinham o trabalho
+// local revertido pro padrão assim que a página abria, mesmo sem nenhum F5 — só o pull
+// normal do bootstrap já bastava. Sem prova de que o remoto é mais novo, a opção segura
+// é NÃO aplicar — nunca tratar um registro antigo como se fosse a fonte da verdade.
 async function buscarRemotoSeMaisNovo(id) {
   const res = await fetch(`${SHEETS_SYNC_URL}?id=${encodeURIComponent(id)}`);
   if (!res.ok) return null;
   const remoto = await res.json();
-  if (!remoto || !remoto.id) return null;
+  if (!remoto || !remoto.id || !remoto.atualizado) return null;
   const ultimoConhecido = lerUltimoTsConhecido(id);
-  if (remoto.atualizado && ultimoConhecido && remoto.atualizado <= ultimoConhecido) return null;
-  if (remoto.atualizado) gravarUltimoTsConhecido(id, remoto.atualizado);
+  if (ultimoConhecido && remoto.atualizado <= ultimoConhecido) return null;
+  gravarUltimoTsConhecido(id, remoto.atualizado);
   return remoto;
 }
 
