@@ -1339,19 +1339,17 @@ function readOverrides() {
 // mais atual (readOverrides() é lido na hora de disparar, não na hora de agendar).
 let backupDebounceTimer = null;
 // O fetch acima é "fire and forget" — se o servidor local não estiver rodando (ou o POST
-// falhar por qualquer motivo), a Promise rejeita e, sem isso aqui, ninguém percebe: o app
-// segue funcionando normalmente, só que sem gravar nada em disco. Já perdemos dados assim
-// (croquis que só existiam no localStorage de uma sessão em que o _serve.ps1 não estava de
-// pé) — por isso agora avisa (uma vez por carregamento de página, pra não floodar toast a
-// cada gravação) quando o backup automático não consegue gravar.
-let backupFailWarned = false;
+// falhar por qualquer motivo), a Promise rejeita. Antes do Supabase (ver
+// assets/supabase-sync.js) isso avisava com um toast, porque o backup-dados.json local
+// era a única rede de segurança de verdade. Agora os dados de posição já vão pro Supabase
+// em paralelo (um banco de verdade, sobrevive a limpar o navegador/trocar de máquina) —
+// esse backup em disco virou só um espelho extra, não crítico. Log discreto no console em
+// vez de toast, pra não alarmar por algo que não é mais o principal ponto de falha.
 function enviarBackupParaArquivo() {
   clearTimeout(backupDebounceTimer);
   backupDebounceTimer = setTimeout(() => {
     salvarBackupAgora().catch(() => {
-      if (backupFailWarned) return;
-      backupFailWarned = true;
-      showToast("Backup em disco falhou — confira se o servidor local (_serve.ps1) está rodando. Suas alterações continuam salvas só neste navegador.", 5000);
+      console.warn("Backup em disco (backup-dados.json) falhou — sem problema, os dados de posição já estão no Supabase. Só afeta o espelho local em disco.");
     });
   }, 400);
 }
