@@ -303,6 +303,12 @@ function faseKey(g) {
   return (g.controladorId || "") + "|" + g.fase;
 }
 
+// Duração do ciclo só pra simulação de "Testar tempo real" — sempre 15s, independente do
+// cicloSegundos real do controlador (110-130s nos dados de exemplo). Com o ciclo real, as
+// cores demoravam demais pra trocar, dificultando testar/depurar o painel. Não mexe no
+// cicloSegundos de verdade do controlador (segue mostrado normalmente em outras telas).
+const TESTE_LIVE_CICLO_SEGUNDOS = 15;
+
 function toggleTesteTempoReal() {
   testeTempoRealAtivo = !testeTempoRealAtivo;
   if (testeTempoRealAtivo) {
@@ -314,15 +320,15 @@ function toggleTesteTempoReal() {
       // Se a fase mistura veicular+pedestre, o ciclo veicular (3 cores) manda no relógio —
       // o pedestre só realça vermelho/verde e ignora o instante de amarelo, sem erro nenhum.
       const tipoCiclo = detail.grupos.some((x) => faseKey(x) === key && x.tipo === "veicular") ? "veicular" : "pedestre";
-      // Duração de vermelho/verde vem do ciclo/estágios reais do controlador desse grupo,
-      // não de um valor fixo igual pra qualquer um (ver liveCiclosPara em app.js).
+      // Duração de vermelho/verde vem do ciclo de teste (30s) e dos estágios reais do
+      // controlador desse grupo (ver liveCiclosPara em app.js e TESTE_LIVE_CICLO_SEGUNDOS acima).
       const ctrl = (detail.controladores || []).find((c) => c.id === g.controladorId);
-      const ciclos = liveCiclosPara(tipoCiclo, ctrl?.cicloSegundos, ctrl?.estagioTotal);
+      const ciclos = liveCiclosPara(tipoCiclo, TESTE_LIVE_CICLO_SEGUNDOS, ctrl?.estagioTotal);
       const ordem = liveCicloOrdem(ciclos);
       const st = {
-        ...liveInitialState(key, tipoCiclo, ctrl?.cicloSegundos, ctrl?.estagioTotal),
+        ...liveInitialState(key, tipoCiclo, TESTE_LIVE_CICLO_SEGUNDOS, ctrl?.estagioTotal),
         tipoCiclo,
-        cicloSegundos: ctrl?.cicloSegundos,
+        cicloSegundos: TESTE_LIVE_CICLO_SEGUNDOS,
         estagioTotal: ctrl?.estagioTotal,
         ciclos,
         ordem,
@@ -376,9 +382,11 @@ function renderTestePainel() {
   panel.style.display = "";
 
   document.getElementById("testePainelControlador").textContent = ctrl.id;
-  document.getElementById("testePainelCiclo").textContent = `Ciclo ${ctrl.cicloSegundos}s`;
+  // Mostra o ciclo de TESTE (30s), não o cicloSegundos real do controlador — é esse valor
+  // que de fato rege a trilha/agulha abaixo (ver TESTE_LIVE_CICLO_SEGUNDOS).
+  document.getElementById("testePainelCiclo").textContent = `Ciclo ${TESTE_LIVE_CICLO_SEGUNDOS}s (teste)`;
 
-  const cicloSegundos = ctrl.cicloSegundos || 120;
+  const cicloSegundos = TESTE_LIVE_CICLO_SEGUNDOS;
   const pxPerSec = TESTE_PAINEL_TRACK_W / cicloSegundos;
 
   const rowsHtml = fasesDoControlador.map((fase) => {
@@ -3031,7 +3039,6 @@ function renderLists() {
             ${g.tipo === "veicular" ? escapeHtml(g.direcao) : "Pedestre"}${g.repetidorDe ? ` · repetidor de ${g.repetidorDe}` : g.temRepetidor ? " · tem repetidor" : ""}
           </span>
         </span>
-        ${testeTempoRealAtivo && testeLiveState[faseKey(g)] ? `<span class="entity-live-dots">${liveDotsHtml(g.tipo, testeLiveState[faseKey(g)].cor)}</span>` : ""}
       </button>
     </li>`).join("");
 

@@ -1791,7 +1791,7 @@ body.anexo-preview-open .entity-drawer { right: 436px; }
   font-weight: 500;
   color: rgba(255, 255, 255, 0.85);
 }
-.teste-fase-label .pin-live-dot { flex-shrink: 0; }
+.teste-fase-label .pin-live-dot { flex-shrink: 0; width: 5px; height: 5px; }
 .teste-fase-track {
   position: relative;
   height: 12px;
@@ -1806,7 +1806,9 @@ body.anexo-preview-open .entity-drawer { right: 436px; }
 .teste-fase-seg--verde { background: #30d158; }
 
 /* Agulha compartilhada: cobre a altura inteira das trilhas, alinhada com a coluna delas
-   (deslocada pela largura fixa de .teste-fase-label + o gap da linha). "transition: left"
+   (deslocada pela largura fixa de .teste-fase-label, 66px, + o gap de .teste-fase-row,
+   10px — precisa bater exatamente com essas duas regras, senão a agulha começa em cima do
+   texto "Fase N", não da trilha, e parece que está "começando do nada"). "transition: left"
    é o que dá o efeito de relógio andando — cada tick move 1s de posição, suavizado ao longo
    do próprio segundo seguinte, em vez de pular seco. Bem mais grossa/brilhante que uma linha
    de 2px pra não se perder no fundo translúcido do painel — é o elemento mais importante ali.
@@ -1816,7 +1818,7 @@ body.anexo-preview-open .entity-drawer { right: 436px; }
   top: 46px;
   bottom: 16px;
   width: 3px;
-  margin-left: 75px;
+  margin-left: calc(66px + 10px);
   background: #ff5b4d;
   box-shadow: 0 0 4px 1px #ff3b30, 0 0 16px 3px rgba(255, 59, 48, 0.85), 0 0 28px rgba(255, 59, 48, 0.5);
   border-radius: 2px;
@@ -2383,14 +2385,14 @@ body.anexo-preview-open .entity-drawer { right: 436px; }
 .map-group-pin-arrow.is-live-vermelho { color: #ff3b30; }
 .map-group-pin-arrow.is-live-amarelo { color: #ffd60a; }
 .map-group-pin-arrow.is-live-verde { color: #30d158; }
-/* contorno branco de 2px na flecha durante o teste — as cores vivas (vermelho/amarelo/verde)
+/* contorno branco fino na flecha durante o teste — as cores vivas (vermelho/amarelo/verde)
    ficam mais destacadas do fundo do mapa com esse contorno do que só o halo borrado que a
    flecha já tem sempre (drop-shadow em .map-group-pin-arrow) */
 .map-group-pin-arrow.is-live-vermelho svg path,
 .map-group-pin-arrow.is-live-amarelo svg path,
 .map-group-pin-arrow.is-live-verde svg path {
   stroke: #fff;
-  stroke-width: 2;
+  stroke-width: 1;
   paint-order: stroke fill;
 }
 
@@ -2470,24 +2472,6 @@ body.anexo-preview-open .entity-drawer { right: 436px; }
   border-color: transparent;
 }
 
-/* teste rápido de tempo real na própria lista de Grupos Focais do editor — dots lado a lado */
-.entity-live-dots {
-  display: flex;
-  flex-direction: row;
-  gap: 4px;
-  flex-shrink: 0;
-}
-.entity-live-dots .pin-live-dot {
-  width: 9px;
-  height: 9px;
-  border-color: var(--border-strong);
-  background: #fff;
-}
-.entity-live-dots .pin-live-dot.is-active-vermelho,
-.entity-live-dots .pin-live-dot.is-active-amarelo,
-.entity-live-dots .pin-live-dot.is-active-verde {
-  border-color: transparent;
-}
 .live-group-main { flex: 1; min-width: 0; }
 .live-group-head {
   display: flex;

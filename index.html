@@ -139,7 +139,26 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script>
-const croquis = listCroquis();
+// Ordenado por nome do croqui, A-Z — sem isso a lista seguia a ordem de inserção (croquis
+// "de fábrica" sempre na mesma ordem, mas os criados na mão ficavam na ordem em que cada
+// navegador salvou, podendo variar de PC pra PC). Croqui sem nome preenchido vai sempre pro
+// final, não vira uma fileira de itens em branco no topo da lista.
+//
+// Nome começando por letra (ex.: "Rua Brasil") vem antes de nome começando por número (ex.:
+// "21 de Abril") — no localeCompare puro, dígito ordena antes de letra, então nomes de rua
+// com número no início (comuns nesse cadastro) tomavam o topo da lista inteira.
+function comecaComLetra(nome) {
+  return /^[a-zà-ÿ]/i.test(nome);
+}
+const croquis = listCroquis().sort((a, b) => {
+  if (!a.nome && !b.nome) return 0;
+  if (!a.nome) return 1;
+  if (!b.nome) return -1;
+  const aLetra = comecaComLetra(a.nome);
+  const bLetra = comecaComLetra(b.nome);
+  if (aLetra !== bLetra) return aLetra ? -1 : 1;
+  return a.nome.localeCompare(b.nome, "pt-BR", { numeric: true });
+});
 
 function openCroqui(id) {
   window.location.href = `editor-croqui.html?id=${id}`;
