@@ -3279,20 +3279,32 @@ selectedControladorId = detail.controladores && detail.controladores[0] ? detail
 // antigo, hoje só um retrato congelado — o banco é que manda) e trocar 1-2s depois. Era
 // o "pisca: mostra o antigo, atualiza pro novo" que incomodava — com o Supabase (bem mais
 // rápido que a planilha) dá pra simplesmente esperar em vez de mascarar o sintoma. Se o
-// banco demorar mais que o teto (rede ruim, fora do ar), desiste de esperar e desenha com
-// o que já tem local, sem travar a tela indefinidamente.
-(async function bootstrapComSync() {
-  if (croquiId && typeof sincronizarDaSupabaseSeNecessario === "function") {
-    await Promise.race([
-      sincronizarDaSupabaseSeNecessario(croquiId, (remoto) => aplicarPosicoesRemotasEm(detail, remoto)),
-      new Promise((resolve) => setTimeout(resolve, 1500)),
-    ]);
-  }
+// banco demorar mais que o teto (rede ruim, fora do ar), desiste de ESPERAR e desenha com
+// o que já tem local, sem travar a tela indefinidamente — mas a checagem em si continua
+// rodando em segundo plano, e se chegar depois do teto ainda precisa redesenhar (ver
+// jaRenderizouUmaVez abaixo); sem isso, o dado certo chegava e ficava só em memória, sem
+// aparecer na tela até algum outro clique forçar um redesenho — ficava parecendo que "às
+// vezes pega dado antigo", só em conexões mais lentas que o teto de 1.5s.
+function renderTudo() {
   renderArea();
   renderMarkers();
   renderControlador();
   renderLists();
   if (detail.area) fitAreaBounds();
+}
+let jaRenderizouUmaVez = false;
+(async function bootstrapComSync() {
+  if (croquiId && typeof sincronizarDaSupabaseSeNecessario === "function") {
+    await Promise.race([
+      sincronizarDaSupabaseSeNecessario(croquiId, (remoto) => {
+        aplicarPosicoesRemotasEm(detail, remoto);
+        if (jaRenderizouUmaVez) renderTudo(); // chegou depois do teto — redesenha com o dado certo
+      }),
+      new Promise((resolve) => setTimeout(resolve, 1500)),
+    ]);
+  }
+  jaRenderizouUmaVez = true;
+  renderTudo();
   // Fluxo guiado: croqui novo já abre com o quadrado de captura ativo, seguindo o mapa
   // enquanto o usuário navega até o cruzamento — ver iniciarCapturaAreaSeguindoMapa. Roda
   // antes do renderHint() de baixo, senão a dica "Comece por aqui" pisca na tela junto com
