@@ -2,7 +2,7 @@
 // Sem framework: estado em variáveis simples + re-render manual das listas/markers.
 
 const params = new URLSearchParams(location.search);
-const croquiId = params.get("id");
+let croquiId = params.get("id");
 let detail = getCroquiDetail(croquiId);
 
 // Croqui novo (sem id) chega da listagem com lat/lng/zoom do ponto que o usuário
@@ -2005,13 +2005,26 @@ function pixelOffsetLatLng(latlng, dx, dy) {
   return map.containerPointToLatLng(L.point(pt.x + dx, pt.y + dy));
 }
 
-const ARROW_RESIZE_GAP = 18;        // px — distância-base (diagonal) dos cantos da caixa, escala com arrowScale; > raio da alça de mover (30px) pra não sobrepor
+const ARROW_RESIZE_GAP = 14;        // px — distância-base (diagonal) dos cantos da caixa, escala com arrowScale; ~ a metade da diagonal do ícone da flecha, pra grudar bem no canto dela
 const ARROW_RESIZE_CORNERS = [[1, 1], [1, -1], [-1, 1], [-1, -1]]; // sinais (x,y) dos 4 cantos, em pixels de tela
 
 // Latlng de onde a flecha em edição está ancorada agora — ponto geográfico real, não
 // depende do zoom (ver groupArrowLatLng, mesma lógica pros grupos já salvos).
 function arrowLatLng() {
   return groupArrowLatLng(editingEntity);
+}
+
+// Os campos "Graus / Latitude / Longitude" do painel (Ajuste fino) só tinham sincronia num
+// sentido — digitar no campo já movia a flecha no mapa, mas arrastar as alças no mapa não
+// atualizava os campos. Ficava parecendo que girar/mover pela alça "não salvava" o ângulo,
+// quando na real só o campo é que ficava com o valor antigo na tela.
+function syncArrowFieldsFromEntity() {
+  const fRotacao = document.getElementById("fRotacao");
+  const fArrowLat = document.getElementById("fArrowLat");
+  const fArrowLng = document.getElementById("fArrowLng");
+  if (fRotacao) fRotacao.value = Math.round(editingEntity.rotationDeg || 0);
+  if (fArrowLat) fArrowLat.value = (editingEntity.arrowLat ?? groupArrowLatLng(editingEntity).lat).toFixed(6);
+  if (fArrowLng) fArrowLng.value = (editingEntity.arrowLng ?? groupArrowLatLng(editingEntity).lng).toFixed(6);
 }
 
 // 1) Mover a flecha — arraste livre, direto: a flecha vai exatamente aonde o mouse for.
@@ -2032,6 +2045,7 @@ function addArrowMoveHandle() {
     previewMarker.setIcon(groupIcon(editingEntity, true));
     repositionRotateHandle();
     repositionArrowResizeHandle();
+    syncArrowFieldsFromEntity();
   });
 }
 
@@ -2068,6 +2082,8 @@ function addRotateHandle() {
     if (deg < 0) deg += 360;
     editingEntity.rotationDeg = Math.round(deg);
     previewMarker.setIcon(groupIcon(editingEntity, true));
+    repositionArrowResizeHandle(); // os cantos acompanham a nova caixa rotacionada
+    syncArrowFieldsFromEntity();
   });
   rotateHandle.on("dragend", () => repositionRotateHandle()); // trava de volta bem em cima da flecha
 }
@@ -2085,8 +2101,25 @@ function repositionRotateHandle() {
 
 // 3) Redimensionar só a flecha — quadradinho em cada um dos 4 cantos da caixa da flecha
 // (padrão de seleção de imagem). Qualquer um dos 4 escala igual (só tamanho, uniforme).
+//
+// A distância dos cantos até o centro é medida no elemento REAL já renderizado (incluindo
+// a rotação atual), em vez de calculada só a partir de arrowScale/zoom — uma flecha
+// rotacionada tem a caixa (bounding box) maior que o próprio desenho (até ~41% maior perto
+// de 45°/135°: fator |cosθ|+|sinθ|), e uma fórmula fixa por escala não acompanhava isso:
+// dependendo do ângulo de rotação, os cantos ficavam ora "dentro" da flecha, ora bem
+// longe dela, mesmo numa escala considerada "normal". Medir o elemento de verdade resolve
+// nos dois sentidos, em qualquer ângulo — e de quebra também vale pra qualquer formato de
+// ícone (não só quadrado).
+const ARROW_RESIZE_MIN_GAP_PX = 16; // piso absoluto — flecha não pode nem ter renderizado ainda
+const ARROW_RESIZE_MARGIN_PX = 6;   // folga além do canto real (já rotacionado) da flecha
+function medirGapResizeFlecha() {
+  const el = previewMarker && previewMarker.getElement() && previewMarker.getElement().querySelector(".map-group-pin-arrow");
+  if (!el) return ARROW_RESIZE_GAP * (editingEntity.arrowScale || 1) * arrowZoomFactor();
+  const rect = el.getBoundingClientRect();
+  return Math.max(ARROW_RESIZE_MIN_GAP_PX, Math.max(rect.width, rect.height) / 2 + ARROW_RESIZE_MARGIN_PX);
+}
 function arrowResizeHandleLatLng(sx, sy) {
-  const gap = ARROW_RESIZE_GAP * (editingEntity.arrowScale || 1) * arrowZoomFactor();
+  const gap = medirGapResizeFlecha();
   return pixelOffsetLatLng(arrowLatLng(), sx * gap, sy * gap);
 }
 
@@ -2102,8 +2135,18 @@ function addArrowResizeHandle() {
       const arrowPt = map.latLngToContainerPoint(arrowLatLng());
       const handlePt = map.latLngToContainerPoint(handle.getLatLng());
       const dragDist = Math.hypot(handlePt.x - arrowPt.x, handlePt.y - arrowPt.y);
-      const scaleAtCurrentZoom = Math.min(6, Math.max(0.3, dragDist / (ARROW_RESIZE_GAP * Math.SQRT2)));
-      editingEntity.arrowScale = Math.round((scaleAtCurrentZoom / arrowZoomFactor()) * 100) / 100;
+      // Fator de crescimento relativo ao gap ATUAL (medido de verdade, ver
+      // medirGapResizeFlecha) em vez de uma fórmula fixa baseada em ARROW_RESIZE_GAP puro.
+      // Antes o clamp de 0.3–6 caía sobre o valor já multiplicado pelo zoom
+      // (scaleAtCurrentZoom = arrowScale × zoom), então em zoom bem próximo o teto de 6
+      // virava, na prática, um teto de 6 ÷ zoomFactor pro arrowScale de verdade — dava a
+      // impressão de a flecha "não crescer mais", limitada pelo zoom. Aplicando o clamp
+      // só depois de já ter voltado pro valor puro (sem zoom), o limite fica sempre 0.3–6
+      // de verdade, em qualquer zoom.
+      const gapAtual = medirGapResizeFlecha();
+      const fatorCrescimento = dragDist / gapAtual;
+      const novaEscala = (editingEntity.arrowScale || 1) * fatorCrescimento;
+      editingEntity.arrowScale = Math.round(Math.min(6, Math.max(0.3, novaEscala)) * 100) / 100;
       previewMarker.setIcon(groupIcon(editingEntity, true));
       repositionArrowResizeHandle(); // os outros 3 cantos acompanham o novo tamanho
     });
@@ -2146,6 +2189,7 @@ function addTextRotateHandle() {
     if (deg < 0) deg += 360;
     editingEntity.rotationDeg = Math.round(deg);
     previewMarker.setIcon(textIcon(editingEntity, true));
+    repositionTextResizeHandle(); // os cantos acompanham a nova caixa rotacionada
   });
   textRotateHandle.on("dragend", () => repositionTextRotateHandle()); // trava de volta no ponto da anotação
 }
@@ -2159,10 +2203,19 @@ function repositionTextRotateHandle() {
   textRotateHandle.setLatLng(textEntityLatLng());
 }
 
-const TEXT_RESIZE_GAP = 16; // px — distância-base dos cantos, escala com pinScale (mesma ideia de ARROW_RESIZE_GAP)
+const TEXT_RESIZE_GAP = 13; // px — fallback caso o elemento ainda não tenha renderizado (ver medirGapResizeFlecha)
+
+// Mesma ideia do medirGapResizeFlecha — ver comentário lá. O balão da anotação (.map-text-pin)
+// nem é quadrado, então medir o elemento de verdade importa ainda mais aqui.
+function medirGapResizeTexto() {
+  const el = previewMarker && previewMarker.getElement() && previewMarker.getElement().querySelector(".map-text-pin");
+  if (!el) return TEXT_RESIZE_GAP * (editingEntity.pinScale || 1) * arrowZoomFactor();
+  const rect = el.getBoundingClientRect();
+  return Math.max(ARROW_RESIZE_MIN_GAP_PX, Math.max(rect.width, rect.height) / 2 + ARROW_RESIZE_MARGIN_PX);
+}
 
 function textResizeHandleLatLng(sx, sy) {
-  const gap = TEXT_RESIZE_GAP * (editingEntity.pinScale || 1) * arrowZoomFactor();
+  const gap = medirGapResizeTexto();
   return pixelOffsetLatLng(textEntityLatLng(), sx * gap, sy * gap);
 }
 
@@ -2178,8 +2231,12 @@ function addTextResizeHandle() {
       const centerPt = map.latLngToContainerPoint(textEntityLatLng());
       const handlePt = map.latLngToContainerPoint(handle.getLatLng());
       const dragDist = Math.hypot(handlePt.x - centerPt.x, handlePt.y - centerPt.y);
-      const scaleAtCurrentZoom = Math.min(6, Math.max(0.3, dragDist / (TEXT_RESIZE_GAP * Math.SQRT2)));
-      editingEntity.pinScale = Math.round((scaleAtCurrentZoom / arrowZoomFactor()) * 100) / 100;
+      // Mesmo fix do arrowResizeHandle — ver comentário lá (clamp sobre o valor puro, não
+      // sobre o valor já multiplicado pelo zoom).
+      const gapAtual = medirGapResizeTexto();
+      const fatorCrescimento = dragDist / gapAtual;
+      const novaEscala = (editingEntity.pinScale || 1) * fatorCrescimento;
+      editingEntity.pinScale = Math.round(Math.min(6, Math.max(0.3, novaEscala)) * 100) / 100;
       previewMarker.setIcon(textIcon(editingEntity, true));
       repositionTextResizeHandle(); // os outros 3 cantos acompanham o novo tamanho
     });
@@ -3031,7 +3088,18 @@ function entityListAddButton(label, onclick) {
 // rascunho vazio (croqui sem nome, sem área, só de alguém abrindo "Adicionar novo Croqui").
 function autoSave() {
   if (!detail.area) return;
+  const eraNovo = !detail.id;
   saveCroquiDetail(detail);
+  // Croqui novo ganha um id só aqui dentro (ver saveCroquiDetail). Sem atualizar a URL, um
+  // F5 ou um "voltar pra Novo croqui" sem passar pelo botão Salvar tratava a página como
+  // zerada de novo — o rascunho ficava órfão, salvo sob um id que nunca aparecia em lugar
+  // nenhum. Agora a aba passa a apontar pro id real assim que ele existe.
+  if (eraNovo) {
+    croquiId = detail.id;
+    history.replaceState(null, "", `editor-croqui.html?id=${detail.id}`);
+    document.title = "Antares · Editar Croqui";
+    renderCroquiSwitcherName();
+  }
 }
 
 function saveCroqui() {
@@ -3209,4 +3277,29 @@ if (detail.area) fitAreaBounds();
 // antes do renderHint() de baixo, senão a dica "Comece por aqui" pisca na tela junto com
 // o drawStatus do preview (ver comentário em renderHint sobre não duplicar mensagem).
 if (!croquiId) iniciarCapturaAreaSeguindoMapa();
+
+// Chave liga/desliga — ver assets/sheets-sync.js. Desligada por padrão, não faz nada
+// (a função nem existe pra ser chamada de verdade fazer fetch algum).
+if (typeof sincronizarDaSheetsSeNecessario === "function") {
+  sincronizarDaSheetsSeNecessario(croquiId, (remoto) => {
+    detail.area = remoto.area || detail.area;
+    detail.grupos = remoto.grupos || detail.grupos;
+    detail.textos = (remoto.textos || []).map((t) => {
+      const local = (detail.textos || []).find((x) => x.id === t.id);
+      return local && local.anexos ? { ...t, anexos: local.anexos } : t;
+    });
+    if (remoto.controladores && detail.controladores) {
+      detail.controladores = detail.controladores.map((c) => {
+        const r = remoto.controladores.find((x) => x.id === c.id);
+        return r && r.posicaoLocal ? { ...c, posicaoLocal: r.posicaoLocal } : c;
+      });
+    }
+    renderArea();
+    renderMarkers();
+    renderControlador();
+    renderLists();
+    if (detail.area) fitAreaBounds();
+    showToast("Posições atualizadas a partir da planilha compartilhada.");
+  });
+}
 renderHint();

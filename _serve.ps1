@@ -41,6 +41,10 @@ while ($listener.IsListening) {
         default { "application/octet-stream" }
       }
       $response.ContentType = $ct
+      # Sem isso, o navegador podia continuar servindo um .js/.html antigo do cache mesmo
+      # depois de editar o arquivo em disco — só sumia com um refresh forçado (Ctrl+F5).
+      # Servidor de dev só roda local, então não custa nada nunca deixar cachear.
+      $response.Headers.Add("Cache-Control", "no-store")
       $response.ContentLength64 = $bytes.Length
       $response.OutputStream.Write($bytes, 0, $bytes.Length)
     } else {

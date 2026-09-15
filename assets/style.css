@@ -2346,13 +2346,14 @@ body.anexo-preview-open .entity-drawer { right: 436px; }
   justify-content: center;
   width: 17px;
   height: 17px;
-  color: #2563a8;
+  color: #fff;
   /* acima do pino e da linha-guia — quando a flecha é arrastada pra cima do pino, o Leaflet
      empilha por posição e ela podia ficar por baixo, "engolindo" o clique de selecionar */
   z-index: 3;
-  /* halo branco (fica solto sobre o mapa agora, não mais sempre em cima do pin colorido —
-     precisa de contraste próprio em qualquer fundo, satélite ou mapa claro) */
-  filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 2px #fff) drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.5));
+  /* sombra pra destacar do mapa — o contraste em si (contra qualquer fundo, satélite ou
+     mapa claro) já vem do contorno preto no path (ver abaixo), essa sombra é só pra dar
+     profundidade/separação a mais. */
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
   cursor: pointer;
 }
 /* área de clique invisível bem maior que o desenho da flecha (17px), pra selecionar ela
@@ -2370,6 +2371,13 @@ body.anexo-preview-open .entity-drawer { right: 436px; }
 }
 .map-group-pin-arrow svg { width: 100%; height: 100%; }
 .map-group-pin-arrow svg, .map-group-pin-arrow svg path { fill: currentColor; }
+/* contorno preto — flecha branca sozinha sumiria em fundo claro do mapa */
+.map-group-pin-arrow svg path {
+  stroke: #000;
+  stroke-width: 1;
+  stroke-linejoin: round;
+  paint-order: stroke fill;
+}
 
 /* cor da flecha durante "Testar tempo real" no editor — mesmas cores das bolinhas (pin-live-dot) */
 .map-group-pin-arrow.is-live-vermelho { color: #ff3b30; }
