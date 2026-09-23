@@ -7,3 +7,6 @@ Thumbs.db
 # backups locais antigos do data.js (não precisam ir pro repo)
 assets/data.js.bak
 assets/data.js.bak2
+
+# rascunhos locais de teste (não vão pro repo)
+_tmp-*.html

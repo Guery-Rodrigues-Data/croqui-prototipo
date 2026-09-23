@@ -74,3 +74,37 @@ leitura/escrita geral via a chave publicável, sem restrição por usuário (nã
 ainda); sem trava de concorrência linha-a-linha entre dois saves simultâneos do mesmo
 croqui (o `atualizado` do servidor evita reverter uma edição mais nova, mas não impede dois
 saves quase ao mesmo tempo de se sobrescreverem — última escrita ganha).
+
+## Trabalhando em equipe (mais de uma pessoa no repo)
+
+**Fluxo:** ninguém faz commit direto no `main` — a Vercel publica o `main`. Cada tarefa vai
+numa branch curta e entra por Pull Request:
+
+```bash
+git checkout main && git pull           # sempre partir do main atualizado
+git checkout -b ux/nome-curto-da-tarefa # prefixo por pessoa/área: ux/, produto/
+# ...altera, testa local...
+git add -A && git commit -m "O que mudou, em uma linha"
+git push -u origin ux/nome-curto-da-tarefa
+# abre o Pull Request no GitHub -> a Vercel gera um link de prévia -> revisão -> merge
+```
+
+**Pra não dar conflito:**
+- Branch de 1–2 dias, não de semanas. Antes de abrir o PR: `git pull origin main` na branch.
+- Combinar quem mexe em quê nos arquivos grandes: `assets/editor.js`, `assets/data.js` (1.100+ controladores), `assets/style.css`.
+- Quebra de linha já está padronizada pelo `.gitattributes` (LF) — não mudar `core.autocrlf`
+  pra "consertar" aviso de CRLF.
+- O Supabase é compartilhado entre as máquinas: mudança de tabela/migração, uma pessoa só roda
+  e avisa antes.
+
+**`backup-dados.json`:** o `_serve.ps1` reescreve esse arquivo a cada alteração no navegador,
+em qualquer máquina que esteja rodando local — se duas pessoas subirem, conflita sempre. Só o
+dono do protótipo sobe esse arquivo (é ele que alimenta o 1º acesso do deploy). Quem mais
+clonar o repo roda **uma vez**, logo depois do clone:
+
+```bash
+git update-index --skip-worktree backup-dados.json
+```
+
+Isso faz o git ignorar as mudanças locais desse arquivo na sua máquina (não some do repo). Pra
+voltar a enxergar: `git update-index --no-skip-worktree backup-dados.json`.
