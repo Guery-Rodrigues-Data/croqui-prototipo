@@ -1657,6 +1657,8 @@ body.anexo-preview-open .entity-drawer { right: 436px; }
   margin-bottom: 8px;
 }
 .entity-list-title--live { margin: 10px 0 14px; }
+.entity-list-title--grupo { justify-content: flex-start; gap: 6px; margin: 16px 0 8px; }
+.entity-list-title--grupo:first-child { margin-top: 0; }
 .live-toggle {
   display: inline-flex;
   align-items: center;
@@ -2346,8 +2348,8 @@ body.anexo-preview-open .entity-drawer { right: 436px; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 17px;
-  height: 17px;
+  width: 21px;
+  height: 21px;
   color: #fff;
   /* acima do pino e da linha-guia — quando a flecha é arrastada pra cima do pino, o Leaflet
      empilha por posição e ela podia ficar por baixo, "engolindo" o clique de selecionar */
@@ -2446,59 +2448,48 @@ body.anexo-preview-open .entity-drawer { right: 436px; }
 
 .live-group-card {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
   background: var(--surface-sunken);
   border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 12px;
-  margin-bottom: 12px;
+  border-radius: 10px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
 }
-.live-group-dots {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+/* Mesmo pino do mapa (.map-group-svgpin), só que parado dentro do card em vez de posicionado
+   em cima do Leaflet — por isso reseta position/left/top/filter daqui. */
+.live-group-card .map-group-svgpin {
+  position: static;
   flex-shrink: 0;
+  filter: none;
+  cursor: default;
 }
-.live-group-dots .pin-live-dot {
-  width: 13px;
-  height: 13px;
-  border-color: var(--border-strong);
-  background: #fff;
-}
-.live-group-dots .pin-live-dot.is-active-vermelho,
-.live-group-dots .pin-live-dot.is-active-amarelo,
-.live-group-dots .pin-live-dot.is-active-verde {
-  border-color: transparent;
-}
+/* porta-focos da lista um pouco maiores (~1,35x) pra ler a cor ao vivo sem forçar a vista */
+.live-group-card .map-group-svgpin--veicular { width: 20px; height: 35px; }
+.live-group-card .map-group-svgpin--pedestre { width: 26px; height: 30px; }
 
 .live-group-main { flex: 1; min-width: 0; }
 .live-group-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
 }
 .live-group-id {
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 15px;
+  font-size: 13.5px;
   color: var(--ink);
 }
-.live-group-icons { display: flex; gap: 6px; color: var(--ink-faint); }
-.live-group-icons svg { width: 14px; height: 14px; }
 .live-group-address {
-  font-size: 12.5px;
-  color: var(--ink-muted);
-  margin: 4px 0 8px;
-}
-.live-group-mv {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  font-size: 12.5px;
-  padding-top: 8px;
-  border-top: 1px solid var(--border);
+  gap: 4px;
+  font-size: 11.5px;
+  color: var(--ink-muted);
+  margin-top: 2px;
 }
+.live-group-mv { display: flex; align-items: center; gap: 4px; font-size: 11px; flex-shrink: 0; }
 .live-group-mv .label { color: var(--ink-faint); }
 .live-group-mv .value { font-family: var(--font-mono); font-weight: 700; color: var(--ink); }
 
@@ -3115,6 +3106,20 @@ body.anexo-preview-open .entity-drawer { right: 436px; }
   padding: 20px 18px 16px;
   overflow-y: auto;
 }
+
+/* Elementos próprios da Apresentação (assets/apresentacao.js) — não existem no editor, mas
+   como o mapa agora é full-bleed (.croqui-map-wrap acima) e a sidebar/topbar flutuam por
+   cima, essas posições (herdadas da tela antiga, sem topbar) precisam desviar da faixa que
+   ficou ocupada: sidebar até left:376px, topbar até top:84px (mesmas contas do .toast acima). */
+.editor-page .live-badge { top: 96px; left: 392px; }
+.editor-page .legend-panel { left: auto; bottom: auto; top: 96px; right: 16px; }
+/* Respiro entre "Croqui" e o campo de nome logo abaixo — só na Apresentação, sem tocar no
+   .name-field geral (o editor tem o croqui-switcher entre os dois, que já dá esse espaço). */
+#croquiNomeSlot .name-field { margin-top: 16px; }
+/* Rodapé fixo da sidebar (Ciclo/Estágio) — mesmo padrão visual do .editor-panel-actions do
+   editor (separador + respiro), só que não é ação, é status, por isso classe própria. Fora do
+   .sidebar-scroll de propósito, pra ficar sempre visível mesmo rolando a lista de grupos. */
+.sidebar-footer { padding-top: 16px; border-top: 1px solid var(--border); flex-shrink: 0; }
 
 .editor-panel-header {
   display: flex;

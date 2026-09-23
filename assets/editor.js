@@ -80,11 +80,8 @@ const ARROW_DX_DEFAULT = 0;   // px — posição padrão (só pra grupo novo, n
 const ARROW_DY_DEFAULT = -65; // > LEADER_LINE_THRESHOLD, pra já nascer separada do pino com a linha fina conectando os dois
 const LEADER_LINE_THRESHOLD = 45; // px de tela — a partir daqui desenha a linha fina ligando pin e flecha
 
-// Faixa de pedestre (zebra) — a marcação no chão do grupo focal pedestre, mesmo papel que
-// a flecha tem pro veicular (pedido da operação: pedestre também precisa de algo no chão
-// indicando por onde passa a faixa, já que hoje só o pino existe, sem nenhuma referência
-// de direção/posição da travessia). SVG do redesenho do Guery (Documents/Icones/Vector.svg).
-const ICON_FAIXA_PEDESTRE = `<svg viewBox="0 0 29 18" fill="currentColor"><path d="M4.19385 0.5C4.38271 0.501098 4.57761 0.50672 4.76807 0.523438C5.02937 0.546379 5.26839 0.664167 5.44873 0.821289C5.62896 0.978328 5.7863 1.20639 5.8335 1.48437C5.87399 1.72284 5.86183 2.03306 5.86182 2.18164V2.18262L5.86084 15.1719C5.86088 15.5366 5.86417 15.9183 5.85693 16.2939C5.85223 16.5381 5.76743 16.8016 5.60596 17.0068C5.47649 17.1712 5.32916 17.2915 5.15088 17.3711C4.98712 17.4441 4.82081 17.4708 4.69287 17.4893L4.6626 17.4941H4.63135C4.21536 17.502 3.79763 17.5006 3.38623 17.498H2.14795C1.93682 17.4949 1.42037 17.5505 0.997559 17.2363C0.663914 16.9885 0.551759 16.646 0.516113 16.3594C0.485242 16.1107 0.507242 15.7971 0.507324 15.6523L0.508301 14.3848L0.507324 2.68359C0.507238 2.36668 0.505021 2.02765 0.513184 1.69727C0.517 1.54305 0.559632 1.39198 0.60791 1.27246C0.656958 1.15112 0.72834 1.0198 0.820801 0.911133L0.935059 0.796875C1.21054 0.560658 1.54783 0.52495 1.7251 0.506836L1.74951 0.504883H1.7749L3.65478 0.501953L4.19385 0.5ZM11.2007 0.501953C11.5333 0.502017 11.9328 0.489977 12.314 0.523438C12.5751 0.546471 12.8144 0.664236 12.9946 0.821289C13.1748 0.978322 13.3322 1.2065 13.3794 1.48437C13.4199 1.72283 13.4068 2.03308 13.4067 2.18164V15.1709L13.4019 16.2939C13.3971 16.5382 13.3125 16.8015 13.1509 17.0068C13.0214 17.1713 12.8742 17.2915 12.6958 17.3711C12.5321 17.4441 12.3666 17.4708 12.2388 17.4893L12.2075 17.4941H12.1763C11.7603 17.502 11.3425 17.5006 10.9312 17.498H9.69287C9.48149 17.495 8.96596 17.5502 8.54346 17.2363C8.20959 16.9885 8.09767 16.6461 8.06201 16.3594C8.03113 16.1106 8.05216 15.7971 8.05225 15.6523L8.0542 14.3848L8.05322 2.68359C8.05314 2.36668 8.04994 2.02765 8.05811 1.69727C8.06192 1.54298 8.1055 1.392 8.15381 1.27246C8.20287 1.15109 8.2742 1.01982 8.3667 0.911133L8.47998 0.796875C8.75546 0.560464 9.09266 0.524959 9.27002 0.506836L9.29541 0.504883H9.31982L11.1997 0.501953H11.2007ZM18.7466 0.501953C19.079 0.502005 19.4779 0.490002 19.8589 0.523438C20.1202 0.546377 20.3592 0.664189 20.5395 0.821289C20.7198 0.978328 20.8771 1.20639 20.9243 1.48437C20.9648 1.72284 20.9526 2.03305 20.9526 2.18164V2.18262L20.9517 15.1719C20.9517 15.5366 20.955 15.9183 20.9478 16.2939C20.943 16.5381 20.8583 16.8016 20.6968 17.0068C20.5673 17.1712 20.42 17.2915 20.2417 17.3711C20.0781 17.444 19.9125 17.4708 19.7847 17.4893L19.7534 17.4941H19.7222C19.3062 17.502 18.8885 17.5006 18.477 17.498H17.2388C17.0276 17.4949 16.5112 17.5505 16.0884 17.2363C15.7548 16.9885 15.6436 16.646 15.6079 16.3594C15.577 16.1106 15.5981 15.7971 15.5981 15.6523L15.5991 14.3848L15.5981 2.68359C15.5981 2.36668 15.5958 2.02765 15.604 1.69727C15.6078 1.54306 15.6505 1.39197 15.6987 1.27246C15.7478 1.15114 15.8192 1.0198 15.9116 0.911133L16.0259 0.796875C16.3014 0.560619 16.6386 0.524951 16.8159 0.506836L16.8403 0.504883H16.8657L18.7456 0.501953H18.7466ZM26.2915 0.501953C26.6241 0.502017 27.0236 0.489976 27.4048 0.523438C27.666 0.546452 27.9052 0.664218 28.0854 0.821289C28.2656 0.978324 28.423 1.20647 28.4702 1.48437C28.5107 1.72283 28.4976 2.03307 28.4976 2.18164V15.1709C28.4976 15.5358 28.4999 15.9181 28.4927 16.2939C28.488 16.5382 28.4033 16.8015 28.2417 17.0068C28.1122 17.1713 27.965 17.2915 27.7866 17.3711C27.623 17.444 27.4575 17.4708 27.3296 17.4893L27.2983 17.4941H27.2681C26.8519 17.502 26.4335 17.5006 26.022 17.498H24.7847C24.5735 17.4949 24.0571 17.5504 23.6343 17.2363C23.3005 16.9885 23.1885 16.6461 23.1528 16.3594C23.122 16.1106 23.143 15.7971 23.1431 15.6523L23.145 14.3848L23.144 2.68359C23.144 2.36668 23.1408 2.02765 23.1489 1.69727C23.1527 1.54299 23.1963 1.392 23.2446 1.27246C23.2937 1.15109 23.365 1.01982 23.4575 0.911133L23.5708 0.796875C23.8462 0.560464 24.1834 0.524963 24.3608 0.506836L24.3862 0.504883H24.4116L26.2905 0.501953H26.2915Z"/></svg>`;
+// ICON_FAIXA_PEDESTRE (marcação no chão do grupo pedestre) mudou pra assets/app.js — precisa
+// estar acessível também em apresentacao.js, que não carrega editor.js.
 
 // A flecha representa algo pintado no chão (a pista) — precisa ficar "grudada" no mesmo
 // ponto do cruzamento em qualquer zoom. A posição (arrowLat/arrowLng) já é um ponto
@@ -515,12 +512,31 @@ document.addEventListener("click", (e) => {
   closeMapSearch();
 });
 
+// Código do controlador: 6 dígitos = 2 do "bairro" + 4 do número. O "bairro" é uma célula de
+// ~2 km (0,02°) da posição, com prefixo 11..38 por uma conta fixa — a mesma usada na migração
+// dos antigos CT-xxxx (supabase/migracao-ids-controladores.sql). Os 4 dígitos aqui são sorteados
+// entre os livres; o banco ainda recusa código repetido (chave primária).
+function prefixoBairro(lat, lng) {
+  const cy = Math.floor((-lat - 25.3) / 0.02);
+  const cx = Math.floor((-lng - 49.15) / 0.02);
+  return 11 + ((((cy * 31 + cx * 17) % 28) + 28) % 28);
+}
+function novoIdControlador(lat, lng) {
+  const usados = new Set([...readControladoresSoltos(), ...CONTROLADORES_SEM_CROQUI_SEED].map((c) => c.id));
+  [...BASE_CROQUIS, ...Object.values(readOverrides())].forEach((c) => (c.controladores || []).forEach((ct) => usados.add(ct.id)));
+  const pre = String(prefixoBairro(lat, lng)).padStart(2, "0");
+  let id;
+  do id = pre + String(Math.floor(Math.random() * 10000)).padStart(4, "0");
+  while (usados.has(id));
+  return id;
+}
+
 map.on("click", (e) => {
   if (aguardandoControladorTeste) {
     aguardandoControladorTeste = false;
     document.getElementById("map").style.cursor = "";
     const novo = {
-      id: "CT-T" + Math.floor(1000 + Math.random() * 9000),
+      id: novoIdControlador(e.latlng.lat, e.latlng.lng),
       lat: e.latlng.lat, lng: e.latlng.lng,
       via: "Controlador de teste", fases: 16, cicloSegundos: 120, estagioAtual: 1, estagioTotal: 4,
     };
@@ -931,7 +947,7 @@ function vincularControladorNoCroqui(ctrl, virtual, manterSolto) {
 // pra pegar os dados reais (fases/ciclo) do controlador escolhido.
 // Exceção: os croquis de teste (CROQUIS_TESTE_COM_TODOS_CONTROLADORES) expõem TODOS os
 // controladores próprios (não só o primeiro) — são só 2 croquis, então abrir o detalhe
-// completo dos dois não pesa, e é o único jeito de CT-TESTE-02/04 aparecerem na lista.
+// completo dos dois não pesa, e é o único jeito de 339002/04 aparecerem na lista.
 // lat/lng de cada candidato = o pin do croqui dono dele (não a posição exata do
 // controlador, que a gente não tem pra quem ainda não foi vinculado em lugar nenhum) —
 // serve como aproximação boa o suficiente pra ordenar por distância (ver renderControladorEscolhaItems).
@@ -1112,7 +1128,7 @@ document.getElementById("controladorEscolhaSalvar").addEventListener("click", ()
 // pra ver/escolher visualmente em vez de só buscar por texto.
 // - Arrastável: reposiciona o controlador solto (só pra ajustar rápido durante teste).
 // - Clicar: vincula esse controlador a este croqui (mesmo se já tiver outro — vira mais um
-//   na lista, igual o CT-1201 tem 2) e já deixa ele "ativo", pra qualquer grupo focal que
+//   na lista, igual o 191201 tem 2) e já deixa ele "ativo", pra qualquer grupo focal que
 //   você desenhar a partir de agora vincular nele.
 let controladoresSoltosLayer = null;
 function renderControladoresSoltosLayer() {
@@ -3128,7 +3144,7 @@ function saveCroqui() {
 
 // ---------- seletor de croqui (trocar sem voltar pra listagem) ----------
 
-// Mostra o ID do controlador (ex.: "CT-1201"), não o nome do cruzamento — o nome já
+// Mostra o ID do controlador (ex.: "191201"), não o nome do cruzamento — o nome já
 // aparece logo abaixo no campo "Nome do Croqui", não precisa repetir.
 function renderCroquiSwitcherName() {
   const ctId = (detail.controladores || [])[0]?.id;

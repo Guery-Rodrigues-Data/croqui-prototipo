@@ -36,7 +36,7 @@ const SHEETS_SYNC_URL = "https://script.google.com/macros/s/AKfycbwkRHZc5wsqfnCm
 // você acabou de fazer com uma versão mais antiga ainda na planilha (o POST é
 // assíncrono e debounced; se o F5 vier antes dele terminar, a planilha ainda está
 // desatualizada, e o pull ia trazer essa versão velha de volta por cima da sua).
-const SHEETS_SYNC_TS_KEY = "croqui_prototipo_v1_sheets_ts";
+const SHEETS_SYNC_TS_KEY = "croqui_prototipo_v2_sheets_ts";
 function lerUltimoTsConhecido(croquiId) {
   try {
     const mapa = JSON.parse(localStorage.getItem(SHEETS_SYNC_TS_KEY)) || {};

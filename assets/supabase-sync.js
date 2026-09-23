@@ -36,7 +36,7 @@ function getSupabaseClient() {
 // só que agora o servidor SEMPRE tem um atualizado válido (coluna not null + gatilho),
 // então não existe mais o caso "registro antigo sem timestamp" que causou o bug de
 // 15/09/2026 (revertia pro padrão mesmo sem F5).
-const SUPABASE_SYNC_TS_KEY = "croqui_prototipo_v1_supabase_ts";
+const SUPABASE_SYNC_TS_KEY = "croqui_prototipo_v2_supabase_ts";
 function lerUltimoTsConhecido(croquiId) {
   try {
     const mapa = JSON.parse(localStorage.getItem(SUPABASE_SYNC_TS_KEY)) || {};
