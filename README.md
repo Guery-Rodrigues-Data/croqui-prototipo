@@ -29,9 +29,8 @@ powershell -ExecutionPolicy Bypass -File .\_serve.ps1
 Site estático puro, sem build. `/` serve o `index.html` (a listagem) automaticamente.
 
 **Senha de acesso:** `middleware.js` (Vercel Edge Middleware) tranca tudo atrás de HTTP
-Basic Auth com uma senha fixa. Usuário/senha padrão estão no topo do arquivo; dá pra
-sobrescrever sem mexer no código definindo `SITE_USUARIO` / `SITE_SENHA` nas *Environment
-Variables* do projeto na Vercel.
+Basic Auth. Usuário e senha vêm das *Environment Variables* `SITE_USUARIO` / `SITE_SENHA` do
+projeto na Vercel e não ficam no código; sem elas o site fica fechado para todo mundo.
 
 **Cadastros no deploy:** no primeiro acesso a uma origem nova (localStorage vazio), o
 `assets/data.js` carrega `backup-dados.json` automaticamente pro `localStorage` — então o
